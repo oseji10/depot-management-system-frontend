@@ -1,0 +1,54 @@
+
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Build output
+build/
+dist/
+
+# Expo
+.expo/
+
+# Caches
+.turbo/
+.cache/
+coverage/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Build output
+build/
+dist/
+
+# Expo
+.expo/
+
+# Caches
+.turbo/
+.cache/
+coverage/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
