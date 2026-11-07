@@ -52,6 +52,7 @@ function CounterPos() {
   const clientRef = useRef(uid());
 
   const [warehouseId, setWarehouseId] = useState<number | null>(null);
+  const [dismissed, setDismissed] = useState(false); // closed the chooser without picking; the till stays empty until they do
   const [chosen, setChosen] = useState(false); // the person has said where they sell from, this visit
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState(0);
@@ -238,11 +239,16 @@ function CounterPos() {
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_26rem]">
-      {!s.van && !chosen && activeWarehouses.length !== 1 && <WarehouseGate warehouses={activeWarehouses} preferred={preferred} loading={warehouses.isLoading} onChoose={choose} />}
+      {!s.van && !chosen && !dismissed && activeWarehouses.length !== 1 && <WarehouseGate warehouses={activeWarehouses} preferred={preferred} loading={warehouses.isLoading} onChoose={choose} onClose={() => setDismissed(true)} canAddWarehouse={s.can("warehouses.create")} canAddBranch={s.can("branches.create")} />}
       {mixing && <MixBuilder layouts={catalogue.data?.mix_layouts ?? []} products={catalogue.data?.products ?? []} used={need} onAdd={addMix} onClose={() => setMixing(false)} />}
       {/* ---------- Products ---------- */}
       <section aria-label="Products" className="min-w-0 pb-24 xl:pb-0">
         <div className="sticky top-[3.25rem] z-20 -mx-4 mb-4 space-y-3 bg-paper/90 px-4 pt-1 pb-3 backdrop-blur sm:-mx-8 sm:px-8 lg:top-0 lg:-mx-5 lg:px-5">
+          {!s.van && !warehouseId && (
+            <button type="button" onClick={() => setDismissed(false)} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-[#f40009]/30 bg-[#fff5f5] px-4 text-left text-sm font-semibold text-[#c40008]">
+              <span>Choose where you are selling from to start</span><span>Choose →</span>
+            </button>
+          )}
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="relative min-w-60 flex-1">
               <Svg d={ICON.search} className="pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 text-ink-soft" />
@@ -258,6 +264,7 @@ function CounterPos() {
                 aria-label="Selling from" value={warehouseId ?? ""} className={`${filterClass} min-h-12`}
                 onChange={(e) => { choose(Number(e.target.value)); setCart([]); }}
               >
+                {!warehouseId && <option value="" disabled>Choose…</option>}
                 {warehouseList.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
             )}
