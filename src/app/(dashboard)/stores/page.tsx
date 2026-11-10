@@ -18,9 +18,9 @@ export default function StoresPage() {
   return (
     <>
     <CrudPage<Store>
-      title="Stores"
-      noun="store"
-      description="Each store is a separate depot business with its own branches, users and data."
+      title="Businesses"
+      noun="business"
+      description="Each business is a separate depot business with its own branches, users and data."
       endpoint="/stores"
       canCreate
       canEdit
@@ -40,14 +40,14 @@ export default function StoresPage() {
         },
       ]}
       fields={[
-        { name: "name", label: "Store name", required: true },
-        { name: "email", label: "Store email", type: "email" },
-        { name: "phone", label: "Store phone" },
+        { name: "name", label: "Business name", required: true },
+        { name: "email", label: "Business email", type: "email" },
+        { name: "phone", label: "Business phone" },
         { name: "branch_name", label: "First branch name", createOnly: true, hint: "Defaults to Head Office." },
         { name: "owner_name", label: "Owner's full name", required: true, createOnly: true },
         { name: "owner_email", label: "Owner's email", type: "email", required: true, createOnly: true },
         { name: "owner_password", label: "Owner's password", type: "password", required: true, createOnly: true, hint: "At least 8 characters." },
-        { name: "is_active", label: "Store is active", type: "checkbox", editOnly: true },
+        { name: "is_active", label: "Business is active", type: "checkbox", editOnly: true },
       ]}
     />
     {menusFor && <MenusModal store={menusFor} onClose={() => setMenusFor(null)} />}

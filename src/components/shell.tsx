@@ -188,6 +188,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
         { href: "/journals", label: "Journals", icon: "journal", show: s.can("accounts.view") },
         { href: "/bank-reconciliation", label: "Bank reconciliation", icon: "journal", show: s.can("accounts.view") },
         { href: "/fiscal-periods", label: "Periods", icon: "periods", show: s.can("accounts.view") },
+        { href: "/analytics", label: "Analytics", icon: "reports", show: s.can("reports.view") && !isRep },
         { href: "/reports", label: "Reports", icon: "reports", show: s.can("reports.view") },
       ],
     },
@@ -377,6 +378,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
               <p className="truncate text-xs text-white/90">
                 {s.roles[0] ?? (s.isPlatform ? "Super admin" : "No role")} · {scopeLabel}
               </p>
+              <Link href="/access" onClick={() => setOpen(false)} className="text-[11px] text-white/80 underline-offset-2 hover:underline">Why can&apos;t I see a menu?</Link>
             </div>
           </div>
         </div>
