@@ -13,8 +13,9 @@ import { formatKobo } from "../../../lib/format";
 type Totals = {
   sales: number; orders: number; average_order: number; discount: number; collected: number; owed: number; cogs: number; gross_profit: number;
   expenses: number; net_profit: number; returns: number; return_count: number; customers: number;
+  units: number; avg_spend: number; new_customers: number;
 };
-type SeriesRow = { date: string; sales: number; orders: number; discount: number; expenses: number; collected: number; gross_profit: number; returns: number };
+type SeriesRow = { date: string; sales: number; orders: number; discount: number; expenses: number; collected: number; gross_profit: number; returns: number; units: number; buyers: number; new_customers: number; avg_spend: number };
 type Analytics = {
   range: { from: string; to: string; days: number; granularity: "day" | "month" };
   previous: { from: string; to: string; totals: Totals; series: SeriesRow[] };
@@ -27,17 +28,25 @@ type Analytics = {
   by_hour: { hour: number; amount: number; count: number }[];
   by_branch: { id: number; name: string; amount: number; count: number; expenses: number }[];
   products: { id: number; name: string; units: number; revenue: number; cost: number; profit: number }[];
-  customers: { top: { id: number; name: string; amount: number; orders: number; owes: number }[]; buyers: number; returning: number; new_buyers: number; new_on_file: number; walk_in_sales: number; walk_in_amount: number };
+  customers: { top: Cust[]; top_orders: Cust[]; on_file: number; buyers: number; returning: number; new_buyers: number; new_on_file: number; walk_in_sales: number; walk_in_amount: number };
   expenses_by_category: { name: string; amount: number; count: number }[];
   basket: { items_per_sale: number; units_per_sale: number };
   receivables: { amount: number; sales: number; customers: number };
   missing_cost: boolean;
+  transactions: { total: number; rows: Txn[] };
+  catalogue: Catalogue;
+  discounts: Discounts;
 };
 
-type Tab = "sales" | "transactions" | "products" | "customers" | "profit";
+type Cust = { id: number; name: string; amount: number; orders: number; owes: number };
+type Txn = { id: number; date: string | null; number: string | null; customer: string | null; amount: number; method: string; channel: string | null; status: string; reference: string | null };
+type Catalogue = { total_products: number; stock_units: number; stock_value: number; stock_value_products: number; out_of_stock: number; out_of_stock_names: string[]; categories: number; pack_sizes: number; top_categories: { name: string; units: number }[]; slow_movers: { id: number; name: string; stock: number }[] };
+type Discounts = { sales_with_discount: number; share_of_sales: number; average_discount: number; by_channel: { key: string; amount: number; count: number }[]; top_products: { id: number; name: string; discount: number; units: number }[]; rebates: { count: number; amount: number; by_status: { key: string; amount: number; count: number }[] } };
+
+type Tab = "sales" | "transactions" | "products" | "customers" | "promos" | "profit";
 const TABS: { id: Tab; label: string }[] = [
   { id: "sales", label: "Sales" }, { id: "transactions", label: "Transactions" }, { id: "products", label: "Products" },
-  { id: "customers", label: "Customers" }, { id: "profit", label: "Profit & expenses" },
+  { id: "customers", label: "Customers" }, { id: "promos", label: "Discounts & promos" }, { id: "profit", label: "Profit & expenses" },
 ];
 
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -74,6 +83,9 @@ export default function AnalyticsPage() {
   const [branch, setBranch] = useState("");
   const [compare, setCompare] = useState(true);
   const branches = useOptions("/branches");
+  const [txMethod, setTxMethod] = useState("");
+  const [txStatus, setTxStatus] = useState("");
+  const [txSearch, setTxSearch] = useState("");
 
   const pick = (id: (typeof PRESETS)[number]["id"]) => {
     setPreset(id);
@@ -95,6 +107,11 @@ export default function AnalyticsPage() {
   const cols = (key: keyof SeriesRow) => (d?.series ?? []).map((r) => ({ label: label(r.date, g), value: r[key] as number }));
   const T = d?.totals; const P = d?.previous.totals;
   const dl = (k: keyof Totals, upIsGood = true) => (compare && T && P ? <Delta now={T[k]} before={P[k]} upIsGood={upIsGood} /> : undefined);
+
+  const txRows = useMemo(() => {
+    const t = txSearch.trim().toLowerCase();
+    return (d?.transactions.rows ?? []).filter((r) => (!txMethod || r.method === txMethod) && (!txStatus || r.status === txStatus) && (!t || (r.customer ?? "walk-in customer").toLowerCase().includes(t) || (r.number ?? "").toLowerCase().includes(t)));
+  }, [d, txMethod, txStatus, txSearch]);
 
   const channelItems = useMemo(() => (d?.by_channel ?? []).map((c) => ({ label: CHANNELS[c.key] ?? cap(c.key), value: c.amount })), [d]);
 
@@ -191,7 +208,7 @@ export default function AnalyticsPage() {
           {tab === "transactions" && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <Stat label="Money collected" value={formatKobo(T.collected)} delta={dl("collected")} hint="Payments received in this period" />
+                <Stat label="Money collected" value={formatKobo(T.collected)} delta={dl("collected")} hint={`${d.transactions.total} payment${d.transactions.total === 1 ? "" : "s"} received`} />
                 <Stat label="Still owed from these sales" value={formatKobo(T.owed)} delta={dl("owed", false)} />
                 <Stat label="Owed to you, all time" value={formatKobo(d.receivables.amount)} hint={`${d.receivables.customers} customers · ${d.receivables.sales} sales`} />
                 <Stat label="Returns" value={formatKobo(T.returns)} delta={dl("returns", false)} hint={`${T.return_count} return${T.return_count === 1 ? "" : "s"}`} />
@@ -216,11 +233,50 @@ export default function AnalyticsPage() {
                   </div>
                 </ChartCard>
               </div>
+
+              <section className="viz min-w-0 rounded-2xl border border-line bg-surface shadow-sm">
+                <div className="flex flex-wrap items-end gap-3 border-b border-line p-4">
+                  <div className="mr-auto"><h3 className="text-[13px] font-medium text-ink-soft">Transaction history</h3><p className="text-xs text-ink-soft">Payments received in this period{d.transactions.total > d.transactions.rows.length ? `, latest ${d.transactions.rows.length} of ${d.transactions.total}` : ""}</p></div>
+                  <select aria-label="Payment method" value={txMethod} onChange={(e) => setTxMethod(e.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm"><option value="">All methods</option>{Object.entries(METHODS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+                  <select aria-label="Status" value={txStatus} onChange={(e) => setTxStatus(e.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm"><option value="">Any status</option><option value="completed">Completed</option><option value="voided">Voided</option></select>
+                  <input type="search" value={txSearch} onChange={(e) => setTxSearch(e.target.value)} placeholder="Search customer or sale no." className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm" />
+                </div>
+                <div className="max-h-[28rem] overflow-auto">
+                  <table className="w-full min-w-[44rem] text-left text-sm">
+                    <thead className="sticky top-0 border-b border-line bg-[#fff5f5] text-[11px] tracking-wider text-ink-soft uppercase"><tr><th className="px-4 py-2.5 font-medium">Date</th><th className="px-4 py-2.5 font-medium">Sale</th><th className="px-4 py-2.5 font-medium">Customer</th><th className="px-4 py-2.5 text-right font-medium">Amount</th><th className="px-4 py-2.5 font-medium">Method</th><th className="px-4 py-2.5 font-medium">Source</th><th className="px-4 py-2.5 font-medium">Status</th></tr></thead>
+                    <tbody className="divide-y divide-line">
+                      {txRows.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-ink-soft">No payments match.</td></tr>}
+                      {txRows.map((r) => (
+                        <tr key={r.id}>
+                          <td className="px-4 py-2.5 whitespace-nowrap">{r.date ? new Date(r.date).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "–"}</td>
+                          <td className="px-4 py-2.5 whitespace-nowrap">{r.number ?? "–"}</td>
+                          <td className="px-4 py-2.5">{r.customer ?? "Walk-in customer"}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums">{formatKobo(r.amount)}</td>
+                          <td className="px-4 py-2.5">{METHODS[r.method] ?? cap(r.method)}</td>
+                          <td className="px-4 py-2.5">{r.channel ? (CHANNELS[r.channel] ?? cap(r.channel)) : "–"}</td>
+                          <td className="px-4 py-2.5"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.status === "voided" ? "bg-red-50 text-[#c23a3a]" : "bg-green-50 text-green-700"}`}>{r.status === "voided" ? "Voided" : "Completed"}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
             </div>
           )}
 
           {tab === "products" && (
             <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-2 gap-3 lg:col-span-2 lg:grid-cols-6">
+                <Stat label="Active products" value={String(d.catalogue.total_products)} />
+                <Stat label="Stock on hand" value={d.catalogue.stock_units.toLocaleString("en-NG")} hint="Bottles and cans, saleable" />
+                <Stat label="Stock value" value={d.catalogue.stock_value > 0 ? formatKobo(d.catalogue.stock_value) : "–"} hint={d.catalogue.stock_value > 0 ? `At cost, from past sales (${d.catalogue.stock_value_products} products)` : "Needs past sales with cost"} />
+                <Stat label="Out of stock" value={String(d.catalogue.out_of_stock)} />
+                <Stat label="Categories" value={String(d.catalogue.categories)} />
+                <Stat label="Pack sizes" value={String(d.catalogue.pack_sizes)} hint="Bottle, crate, pack…" />
+              </div>
+              <ChartCard wide title="Bottles and cans sold" value={T.units.toLocaleString("en-NG")} sub={dl("units")} table={{ head: ["Date", "Units sold"], rows: d.series.map((r) => [label(r.date, g), r.units]) }}>
+                <ColumnChart items={cols("units")} kind="count" name="Units sold" />
+              </ChartCard>
               <ChartCard title="Best sellers by revenue" sub="Top 10" table={{ head: ["Product", "Revenue", "Units"], rows: d.products.map((p) => [p.name, formatKobo(p.revenue), p.units]) }}>
                 <RankBars items={d.products.slice(0, 10).map((p) => ({ label: p.name, value: p.revenue, note: `${p.units.toLocaleString("en-NG")} units sold` }))} />
               </ChartCard>
@@ -232,6 +288,15 @@ export default function AnalyticsPage() {
                   <RankBars items={[...d.products].sort((a, b) => b.profit - a.profit).slice(0, 10).map((p) => ({ label: p.name, value: Math.max(0, p.profit), note: `${pctOf(p.profit, p.revenue)} margin` }))} />
                 </ChartCard>
               )}
+              <ChartCard title="Top categories" sub="Bottles and cans sold, by category" table={{ head: ["Category", "Units"], rows: d.catalogue.top_categories.map((c) => [c.name, c.units]) }}>
+                <RankBars kind="count" items={d.catalogue.top_categories.map((c) => ({ label: c.name, value: c.units }))} />
+              </ChartCard>
+              <ChartCard title="Out of stock now" sub={d.catalogue.out_of_stock ? `${d.catalogue.out_of_stock} product${d.catalogue.out_of_stock === 1 ? "" : "s"} with nothing saleable` : undefined}>
+                {d.catalogue.out_of_stock_names.length ? <ul className="space-y-1.5 text-sm">{d.catalogue.out_of_stock_names.map((n) => <li key={n} className="flex justify-between"><span>{n}</span><span className="text-ink-soft">0 left</span></li>)}{d.catalogue.out_of_stock > d.catalogue.out_of_stock_names.length && <li className="text-xs text-ink-soft">and {d.catalogue.out_of_stock - d.catalogue.out_of_stock_names.length} more</li>}</ul> : <p className="py-6 text-sm text-ink-soft">Everything is in stock.</p>}
+              </ChartCard>
+              <ChartCard wide title="Slow movers" sub="In stock but not sold at all in this period" table={{ head: ["Product", "In stock"], rows: d.catalogue.slow_movers.map((p) => [p.name, p.stock]) }}>
+                <RankBars kind="count" items={d.catalogue.slow_movers.map((p) => ({ label: p.name, value: p.stock }))} empty="Every product in stock sold something." />
+              </ChartCard>
               <section className="viz min-w-0 overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm lg:col-span-2">
                 <table className="w-full min-w-[34rem] text-left text-sm">
                   <thead className="border-b border-line bg-[#fff5f5] text-[11px] tracking-wider text-ink-soft uppercase"><tr><th className="px-4 py-2.5 font-medium">Product</th><th className="px-4 py-2.5 text-right font-medium">Units</th><th className="px-4 py-2.5 text-right font-medium">Revenue</th>{!d.missing_cost && <><th className="px-4 py-2.5 text-right font-medium">Profit</th><th className="px-4 py-2.5 text-right font-medium">Margin</th></>}</tr></thead>
@@ -249,7 +314,9 @@ export default function AnalyticsPage() {
           {tab === "customers" && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <Stat label="Customers on file" value={String(d.customers.on_file)} />
                 <Stat label="Customers who bought" value={String(d.customers.buyers)} delta={dl("customers")} />
+                <Stat label="Average spend per customer" value={formatKobo(T.avg_spend)} delta={dl("avg_spend")} />
                 <Stat label="New buyers" value={String(d.customers.new_buyers)} hint="First purchase in this period" />
                 <Stat label="Returning buyers" value={String(d.customers.returning)} hint={pctOf(d.customers.returning, d.customers.buyers) + " of buyers"} />
                 <Stat label="Added to your list" value={String(d.customers.new_on_file)} hint="New customer records" />
@@ -258,11 +325,49 @@ export default function AnalyticsPage() {
                 <ChartCard title="Top customers" sub="By amount bought" table={{ head: ["Customer", "Bought", "Orders", "Owes"], rows: d.customers.top.map((c) => [c.name, formatKobo(c.amount), c.orders, formatKobo(c.owes)]) }}>
                   <RankBars items={d.customers.top.slice(0, 10).map((c) => ({ label: c.name, value: c.amount, note: `${c.orders} orders${c.owes > 0 ? ` · owes ${formatKobo(c.owes)}` : ""}` }))} empty="No customer sales in this period." />
                 </ChartCard>
+                <ChartCard title="Top customers by orders" sub="Most orders placed" table={{ head: ["Customer", "Orders", "Bought"], rows: d.customers.top_orders.map((c) => [c.name, c.orders, formatKobo(c.amount)]) }}>
+                  <RankBars kind="count" items={d.customers.top_orders.slice(0, 10).map((c) => ({ label: c.name, value: c.orders, note: formatKobo(c.amount) }))} empty="No customer sales in this period." />
+                </ChartCard>
+                <ChartCard title="Customers buying" value={String(d.customers.buyers)} sub={dl("customers")} table={{ head: ["Date", "Customers who bought"], rows: d.series.map((r) => [label(r.date, g), r.buyers]) }}>
+                  <ColumnChart items={cols("buyers")} kind="count" name="Customers" />
+                </ChartCard>
+                <ChartCard title="New customers added" value={String(T.new_customers)} sub={dl("new_customers")} table={{ head: ["Date", "New customers"], rows: d.series.map((r) => [label(r.date, g), r.new_customers]) }}>
+                  <ColumnChart items={cols("new_customers")} kind="count" name="New customers" />
+                </ChartCard>
+                <ChartCard title="Average spend per customer" value={formatKobo(T.avg_spend)} sub={dl("avg_spend")} table={{ head: ["Date", "Avg spend"], rows: d.series.map((r) => [label(r.date, g), formatKobo(r.avg_spend)]) }}>
+                  <AreaChart points={pts("avg_spend")} name="Average spend" />
+                </ChartCard>
                 <ChartCard title="Customers vs walk-ins" sub="Sales to a named customer or to someone without a record">
                   <Donut items={[{ label: "Named customers", value: T.sales - d.customers.walk_in_amount }, { label: "Walk-ins", value: d.customers.walk_in_amount }]} centre="Sales" />
                   <p className="mt-3 text-xs text-ink-soft">{d.customers.walk_in_sales} walk-in sale{d.customers.walk_in_sales === 1 ? "" : "s"}. Recording customers lets you track who owes you and who buys often.</p>
                 </ChartCard>
               </div>
+            </div>
+          )}
+
+          {tab === "promos" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <Stat label="Discount given" value={formatKobo(T.discount)} delta={dl("discount", false)} hint={pctOf(T.discount, T.sales + T.discount) + " of list value"} />
+                <Stat label="Sales with a discount" value={String(d.discounts.sales_with_discount)} hint={`${d.discounts.share_of_sales}% of sales`} />
+                <Stat label="Average discount" value={formatKobo(d.discounts.average_discount)} hint="On sales that had one" />
+                <Stat label="Rebates earned" value={formatKobo(d.discounts.rebates.amount)} hint={`${d.discounts.rebates.count} calculation${d.discounts.rebates.count === 1 ? "" : "s"} ending in this period`} />
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <ChartCard wide title="Discount given over time" value={formatKobo(T.discount)} sub={dl("discount", false)} table={{ head: ["Date", "Discount"], rows: d.series.map((r) => [label(r.date, g), formatKobo(r.discount)]) }}>
+                  <AreaChart points={pts("discount")} name="Discount" />
+                </ChartCard>
+                <ChartCard title="Discount by channel" table={{ head: ["Channel", "Discount", "Sales discounted"], rows: d.discounts.by_channel.map((c) => [CHANNELS[c.key] ?? cap(c.key), formatKobo(c.amount), c.count]) }}>
+                  <Donut items={d.discounts.by_channel.map((c) => ({ label: CHANNELS[c.key] ?? cap(c.key), value: c.amount }))} centre="Discount" />
+                </ChartCard>
+                <ChartCard title="Most discounted products" sub="List price minus the price charged" table={{ head: ["Product", "Discount", "Units"], rows: d.discounts.top_products.map((p) => [p.name, formatKobo(p.discount), p.units]) }}>
+                  <RankBars items={d.discounts.top_products.map((p) => ({ label: p.name, value: p.discount, note: `${p.units.toLocaleString("en-NG")} units` }))} empty="No product was sold below its list price." />
+                </ChartCard>
+                <ChartCard wide title="Manufacturer rebates" sub="Rebate calculations whose period ends in this range" table={{ head: ["Status", "Rebate", "Calculations"], rows: d.discounts.rebates.by_status.map((r) => [cap(r.key), formatKobo(r.amount), r.count]) }}>
+                  <RankBars items={d.discounts.rebates.by_status.map((r) => ({ label: cap(r.key), value: r.amount, note: `${r.count} calculation${r.count === 1 ? "" : "s"}` }))} empty="No rebate calculations in this period." />
+                </ChartCard>
+              </div>
+              <p className="text-xs text-ink-soft">Email and SMS campaigns are not part of the depot system yet, so this tab covers the promotions it does track: price promos, discounts and rebates.</p>
             </div>
           )}
 
