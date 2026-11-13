@@ -22,7 +22,8 @@ export function BusinessHeader({ onLogoSettled, branch }: { onLogoSettled?: () =
       )}
       <p className="text-lg font-black tracking-tight">{store?.name}</p>
       {store?.address && <p className="text-xs">{store.address}</p>}
-      {(store?.phone || store?.email) && <p className="text-xs font-semibold">{[store?.phone && `Tel: ${store.phone}`, store?.email && `Email: ${store.email}`].filter(Boolean).join("  ·  ")}</p>}
+      {store?.phone && <p className="text-xs font-semibold">Tel: {store.phone}</p>}
+      {store?.email && <p className="text-xs font-semibold">Email: {store.email}</p>}
       {branch && <p className="text-xs">{branch}</p>}
       {missing.length > 0 && can("business.manage") && (
         <p className="mt-1 text-[11px] text-amber-700 print:hidden">Your {missing.join(" and ")} will print here once added. <Link href="/business" className="font-semibold underline">Add it</Link></p>

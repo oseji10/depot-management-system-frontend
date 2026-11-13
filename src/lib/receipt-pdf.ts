@@ -31,7 +31,7 @@ export async function saleReceiptFile(sale: Sale, store: StoreHead, payTo: strin
   if (sale.balance_due > 0 && sale.status === "completed") totals.push({ label: "Balance owed", value: naira(sale.balance_due), bold: true });
 
   const blob = receiptPdf({
-    business: { name: store?.name ?? "", lines: [store?.address, [store?.phone && `Tel: ${store.phone}`, store?.email].filter(Boolean).join("  ")].filter(Boolean) as string[] },
+    business: { name: store?.name ?? "", lines: [store?.address, store?.phone && `Tel: ${store.phone}`, store?.email && `Email: ${store.email}`].filter(Boolean) as string[] },
     title: sale.status === "void" ? "VOID RECEIPT" : invoice ? "INVOICE" : "RECEIPT",
     number: sale.number, when: formatDateTime(sale.sold_at),
     meta: [["Customer", sale.customer?.name ?? "Walk-in"], ["Served by", sale.creator?.name ?? "-"], ["Type", CHANNEL_LABEL[sale.channel] ?? sale.channel]],

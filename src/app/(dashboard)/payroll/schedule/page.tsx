@@ -47,7 +47,7 @@ function SchedulePage() {
         widths: [20, 14, 18, 10, 10, 9, 10, 11], right: [false, false, false, true, true, true, true, true],
         rows: rows.map((x) => [`${x.name} (${x.staff_no})`, x.bank_name ?? "-", x.account_number ?? "-", formatAmount(x.basic), x.rewards ? formatAmount(x.rewards) : "-", x.other_earnings ? formatAmount(x.other_earnings) : "-", x.deductions ? `-${formatAmount(x.deductions)}` : "-", formatAmount(x.net)]),
         foot: ["Total", "", "", formatAmount(sum("basic")), formatAmount(sum("rewards")), formatAmount(sum("other_earnings")), `-${formatAmount(sum("deductions"))}`, formatAmount(sum("net"))],
-      }, { name: st?.name ?? "", lines: [st?.address, [st?.phone && `Tel: ${st.phone}`, st?.email && `Email: ${st.email}`].filter(Boolean).join("   ")].filter(Boolean) as string[] }, jpeg));
+      }, { name: st?.name ?? "", lines: [st?.address, st?.phone && `Tel: ${st.phone}`, st?.email && `Email: ${st.email}`].filter(Boolean) as string[] }, jpeg));
     } catch (e) { setPdfNote((e as Error).message); } finally { setPdfBusy(false); }
   };
   const approve = useMutation({
