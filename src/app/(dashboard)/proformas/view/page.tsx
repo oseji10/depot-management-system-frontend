@@ -17,7 +17,7 @@ import { PROFORMA_LABEL, PROFORMA_TONE } from "../../../../lib/status";
 import type { Paginated, Proforma, ProformaStatus, Warehouse } from "../../../../lib/types";
 
 function message(p: Proforma, storeName: string) {
-  const out = [`*${storeName}*`, `PROFORMA INVOICE ${p.number}`, `Date: ${formatDate(p.issued_on)}`];
+  const out = [`*${storeName}*`, `PROFORMA INVOICE ${p.number}`];
   if (p.valid_until) out.push(`Valid until: ${formatDate(p.valid_until)}`);
   out.push(`For: ${p.customer_name}`, "");
   for (const l of p.lines ?? []) out.push(`${l.quantity} x ${l.description} @ ${formatKobo(l.unit_price)} = ${formatKobo(l.line_total)}`);
@@ -66,7 +66,7 @@ function ProformaPage() {
       <PrintSheet
         back={{ href: "/proformas", label: "Proforma invoices" }}
         title="Proforma invoice"
-        subtitle={<><p className="font-mono font-bold">{p.number}</p><p>{formatDate(p.issued_on)}</p>{p.valid_until && <p>Valid until {formatDate(p.valid_until)}</p>}</>}
+        subtitle={<><p className="font-mono font-bold">{p.number}</p>{p.valid_until && <p>Valid until {formatDate(p.valid_until)}</p>}</>}
         actions={actions}
       >
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">

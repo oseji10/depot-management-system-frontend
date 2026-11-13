@@ -31,6 +31,7 @@ function CreditNotePage() {
             <div className="flex justify-between text-base font-bold"><dt>Credit value</dt><dd>{formatKobo(r.total)}</dd></div>
             {r.applied_to_balance > 0 && <div className="flex justify-between"><dt>Taken off what they owe</dt><dd>{formatKobo(r.applied_to_balance)}</dd></div>}
             {r.refunded > 0 && <div className="flex justify-between"><dt>Paid back ({r.refund_method})</dt><dd>{formatKobo(r.refunded)}</dd></div>}
+            {(r.exchange_credit ?? 0) > 0 && <div className="flex justify-between"><dt>Exchange credit</dt><dd>{formatKobo(r.exchange_credit!)}</dd></div>}
           </dl>
           <p className="mt-6 text-xs text-ink-soft">Reason: {r.reason}. Prepared by {r.creator?.name}.</p>
           <div className="mt-12 grid grid-cols-2 gap-10 text-xs text-ink-soft"><p className="border-t border-line pt-1">Issued by</p><p className="border-t border-line pt-1">Customer signature</p></div>

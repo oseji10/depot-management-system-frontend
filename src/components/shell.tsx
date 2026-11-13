@@ -119,7 +119,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
       ],
     },
     {
-      title: "Field sales & fleet",
+      title: "Van sales & fleet",
       items: [
         { href: "/field", label: "Salespeople", icon: "van", show: s.can("trips.view") },
         { href: "/field/trips", label: "Trips", icon: "route", show: s.can("trips.view") },
@@ -135,7 +135,6 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
         { href: "/products", label: "Products", icon: "products", show: s.can("products.view") },
         { href: "/categories", label: "Categories", icon: "categories", show: s.can("products.view") },
         { href: "/rebate-categories", label: "Rebate categories", icon: "rebate", show: s.can("products.view") },
-                { href: "/units", label: "Units", icon: "units", show: s.can("products.view") },
         { href: "/price-lists", label: "Price lists", icon: "price", show: s.can("pricing.view") },
         { href: "/promotions", label: "Promotions", icon: "rebate", show: s.can("pricing.view") },
       ],

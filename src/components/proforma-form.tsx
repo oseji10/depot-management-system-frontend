@@ -11,7 +11,6 @@ import { Button, Field, inputClass } from "./ui";
 
 type Row = { key: number; product_id: number; unit_id: number; quantity: string; price: string };
 
-const today = () => new Date().toISOString().slice(0, 10);
 let seq = 1;
 
 /** Build or edit a proforma: who it is for, what is quoted, and how long the prices hold. */
@@ -23,7 +22,6 @@ export function ProformaForm({ existing }: { existing?: Proforma }) {
   const [phone, setPhone] = useState(existing?.customer_phone ?? "");
   const [email, setEmail] = useState(existing?.customer_email ?? "");
   const [address, setAddress] = useState(existing?.customer_address ?? "");
-  const [issued, setIssued] = useState(existing?.issued_on ?? today());
   const [validUntil, setValidUntil] = useState(existing?.valid_until ?? "");
   const [discount, setDiscount] = useState(koboToInput(existing?.discount ?? 0));
   const [delivery, setDelivery] = useState(koboToInput(existing?.delivery_fee ?? 0));
@@ -65,7 +63,7 @@ export function ProformaForm({ existing }: { existing?: Proforma }) {
     mutationFn: () => {
       const body = {
         customer_id: customerId, customer_name: name, customer_phone: phone || null, customer_email: email || null, customer_address: address || null,
-        issued_on: issued, valid_until: validUntil || null, discount: nairaToKobo(discount), delivery_fee: nairaToKobo(delivery), notes: notes || null, terms: terms || null,
+        valid_until: validUntil || null, discount: nairaToKobo(discount), delivery_fee: nairaToKobo(delivery), notes: notes || null, terms: terms || null,
         lines: rows.map((r) => ({ product_id: r.product_id, unit_id: r.unit_id, quantity: parseInt(r.quantity, 10) || 0, unit_price: nairaToKobo(r.price) })),
       };
       return existing ? api<Proforma>(`/proformas/${existing.id}`, { method: "PUT", body }) : api<Proforma>("/proformas", { method: "POST", body });
@@ -142,7 +140,7 @@ export function ProformaForm({ existing }: { existing?: Proforma }) {
                     </select>
                   </div>
                   <Field label="Quantity" type="number" min={1} inputMode="numeric" value={r.quantity} onChange={(e) => patch(r.key, { quantity: e.target.value })} />
-                  <Field label="Price (₦)" inputMode="decimal" value={r.price} onChange={(e) => patch(r.key, { price: e.target.value })} hint={`List ${formatKobo(listOf(r))}${below ? " · discounted" : ""}`} />
+                  <Field label="Price (₦)" inputMode="decimal" value={r.price} onChange={(e) => patch(r.key, { price: e.target.value })} hint={`List ${formatKobo(listOf(r))}${below ? " · discounted" : nairaToKobo(r.price) > listOf(r) ? " · above list" : ""}`} />
                   <div>
                     <span className="mb-1.5 block text-sm font-medium">Line total</span>
                     <p className="flex min-h-11 items-center font-semibold">{formatKobo(nairaToKobo(r.price) * (parseInt(r.quantity, 10) || 0))}</p>
@@ -158,7 +156,6 @@ export function ProformaForm({ existing }: { existing?: Proforma }) {
       <section className="rounded-2xl border border-line bg-surface p-4 shadow-sm sm:p-5">
         <h2 className="mb-3 font-semibold">Terms</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Date" type="date" value={issued} onChange={(e) => setIssued(e.target.value)} required />
           <Field label="Valid until" type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} error={err("valid_until")} hint="Leave empty if the prices do not expire." />
           <Field label="Discount (₦)" inputMode="decimal" value={discount} onChange={(e) => setDiscount(e.target.value)} error={err("discount")} />
           <Field label="Delivery fee (₦)" inputMode="decimal" value={delivery} onChange={(e) => setDelivery(e.target.value)} error={err("delivery_fee")} />

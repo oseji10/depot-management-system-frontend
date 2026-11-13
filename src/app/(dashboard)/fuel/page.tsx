@@ -18,7 +18,7 @@ const litres = (n: number) => `${n.toLocaleString("en-NG", { maximumFractionDigi
 export default function FuelPage() {
   const s = useSession();
   const [tab, setTab] = useState<"vouchers" | "stations">("vouchers");
-  const [modal, setModal] = useState<null | "station" | "voucher" | { topUp: FuelStationRow } | { void: FuelVoucher } | { issued: FuelVoucher }>(null);
+  const [modal, setModal] = useState<null | "station" | "voucher" | { topUp: FuelStationRow } | { editStation: FuelStationRow } | { void: FuelVoucher } | { issued: FuelVoucher }>(null);
   const [status, setStatus] = useState("");
   const qc = useQueryClient();
   const manage = s.can("fuel.manage");
@@ -70,7 +70,7 @@ export default function FuelPage() {
                     <td className="px-4 py-3 text-right font-semibold tabular-nums">{x.tracks_litres ? litres(x.litres) : <span className="text-xs font-normal text-ink-soft">not tracked yet</span>}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatKobo(x.balance)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{x.price_per_litre ? formatKobo(x.price_per_litre) : "–"}</td>
-                    <td className="px-4 py-3 text-right"><span className="inline-flex flex-wrap items-start justify-end gap-2">{manage && <Button size="sm" variant="secondary" onClick={() => setModal({ topUp: x })}>Top up</Button>}{manage && <DeleteButton size="sm" path={`/fuel-stations/${x.id}`} noun="fuel station" onDone={() => void qc.invalidateQueries({ queryKey: ["fuel"] })} />}</span></td>
+                    <td className="px-4 py-3 text-right"><span className="inline-flex flex-wrap items-start justify-end gap-2">{manage && <Button size="sm" variant="secondary" onClick={() => setModal({ topUp: x })}>Top up</Button>}{manage && <Button size="sm" variant="secondary" onClick={() => setModal({ editStation: x })}>Edit</Button>}{manage && <DeleteButton size="sm" path={`/fuel-stations/${x.id}`} noun="fuel station" onDone={() => void qc.invalidateQueries({ queryKey: ["fuel"] })} />}</span></td>
                   </tr>
                 ))}
             </tbody>
@@ -115,6 +115,7 @@ export default function FuelPage() {
 
       {modal === "station" && <StationModal onClose={() => setModal(null)} />}
       {modal === "voucher" && <VoucherModal stations={list.filter((x) => x.is_active)} onClose={() => setModal(null)} onIssued={(v) => setModal({ issued: v })} />}
+      {modal && typeof modal === "object" && "editStation" in modal && <StationModal station={modal.editStation} onClose={() => setModal(null)} />}
       {modal && typeof modal === "object" && "topUp" in modal && <TopUpModal station={modal.topUp} onClose={() => setModal(null)} />}
       {modal && typeof modal === "object" && "void" in modal && <VoidModal voucher={modal.void} onClose={() => setModal(null)} />}
       {modal && typeof modal === "object" && "issued" in modal && <IssuedModal voucher={modal.issued} onClose={() => setModal(null)} />}
@@ -127,19 +128,22 @@ function useDone(onClose: () => void) {
   return () => { void qc.invalidateQueries({ queryKey: ["fuel"] }); for (const k of ["reports", "journals", "accounts"]) void qc.invalidateQueries({ queryKey: [k] }); onClose(); };
 }
 
-function StationModal({ onClose }: { onClose: () => void }) {
-  const [name, setName] = useState(""); const [location, setLocation] = useState(""); const [phone, setPhone] = useState("");
+function StationModal({ station, onClose }: { station?: FuelStationRow; onClose: () => void }) {
+  const [name, setName] = useState(station?.name ?? ""); const [location, setLocation] = useState(station?.location ?? ""); const [phone, setPhone] = useState(station?.phone ?? "");
+  const [price, setPrice] = useState(station?.price_per_litre ? String(station.price_per_litre / 100) : ""); const [active, setActive] = useState(station?.is_active ?? true);
   const done = useDone(onClose);
-  const save = useMutation({ mutationFn: () => api("/fuel-stations", { method: "POST", body: { name, location: location || null, phone: phone || null, is_active: true } }), onSuccess: done });
+  const save = useMutation({ mutationFn: () => api(station ? `/fuel-stations/${station.id}` : "/fuel-stations", { method: station ? "PUT" : "POST", body: { name, location: location || null, phone: phone || null, price_per_litre: price ? nairaToKobo(price) : null, is_active: active } }), onSuccess: done });
 
   return (
-    <Modal title="Add a fuel station" onClose={onClose}>
+    <Modal title={station ? `Edit ${station.name}` : "Add a fuel station"} onClose={onClose}>
       <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
         <Field label="Station name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         <Field label="Location (optional)" value={location} onChange={(e) => setLocation(e.target.value)} />
         <Field label="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        <MoneyField label="Usual price per litre (optional)" value={price} onChange={setPrice} />
+        {station && <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className="size-4" checked={active} onChange={(e) => setActive(e.target.checked)} /> Active (can be chosen when issuing vouchers)</label>}
         {save.error && <ErrorNote>{(save.error as Error).message}</ErrorNote>}
-        <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit" busy={save.isPending} disabled={!name.trim()}>Add station</Button></div>
+        <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit" busy={save.isPending} disabled={!name.trim()}>{station ? "Save changes" : "Add station"}</Button></div>
       </form>
     </Modal>
   );

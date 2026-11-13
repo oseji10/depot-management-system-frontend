@@ -2,8 +2,7 @@
 
 import { useInView } from "../hooks/in-view";
 import { TerminalSelect, terminalOf } from "./terminal-select";
-import { WhatsAppButton } from "./whatsapp-button";
-import { saleMessage } from "../lib/share";
+import { ReceiptShareButton } from "./receipt-share-button";
 import { TransferTarget, transferPayload, transferReady, type TransferValue } from "./transfer-target";
 import { EmptiesPanel } from "./empties-panel";
 import { emptiesPayload, emptiesPlan } from "../lib/empties";
@@ -487,7 +486,7 @@ export function FieldPos() {
                 <Button variant="secondary" onClick={() => setReceipt(true)}>Show receipt</Button>
                 <Button onClick={() => { setDone(null); focusIfDesktop(searchRef.current); }}>New sale</Button>
               </div>
-              <WhatsAppButton className="mt-2 w-full" phone={done.sale.customer?.phone} text={saleMessage(done.sale, snap?.store?.name ?? "", []).text} label={done.sale.balance_due > 0 ? "Send invoice on WhatsApp" : "Send receipt on WhatsApp"} />
+              <ReceiptShareButton className="mt-2 w-full" sale={done.sale} store={{ ...s.store, name: snap?.store?.name ?? s.store?.name }} />
               <p className="mt-3 text-center text-sm"><Link href="/sales" className="font-semibold text-[#f40009] hover:underline">View my sales</Link></p>
             </>
           )}

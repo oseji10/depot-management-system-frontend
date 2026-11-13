@@ -7,6 +7,7 @@ import { formatDateTime, formatKobo, formatTime } from "../lib/format";
 import { PAYMENT_LABEL, PAYMENT_TONE } from "../lib/status";
 import type { TripReport } from "../lib/types";
 import { formatQty } from "../lib/units";
+import { DispatchNote } from "./dispatch-note";
 import { ImprestModal } from "./imprest-modal";
 import { Badge, Button, Card, ICON, Stat, TableCard, theadClass, thClass } from "./ui";
 
@@ -15,6 +16,7 @@ export function TripView({ report, mine = false }: { report: TripReport; mine?: 
   const { money: m, totals: t } = report;
   const s = useSession();
   const [giving, setGiving] = useState(false);
+  const [printing, setPrinting] = useState<TripReport["loads"][number] | null>(null);
   const imp = report.imprest;
   const open = report.trip.status === "open";
   const q = (n: number, l: TripReport["lines"][number]) => formatQty(n, l.base_unit, l.pack);
@@ -147,7 +149,10 @@ export function TripView({ report, mine = false }: { report: TripReport; mine?: 
           <ol className="space-y-4">
             {report.loads.map((l) => (
               <li key={l.id} className="text-sm">
-                <p className="font-semibold">{l.kind === "issue" ? "Loaded onto the van" : "Came off the van"} <span className="font-normal text-ink-soft">· {formatDateTime(l.at)}</span></p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-semibold">{l.kind === "issue" ? "Loaded onto the van" : "Came off the van"} <span className="font-normal text-ink-soft">· {formatDateTime(l.at)}</span></p>
+                  <button type="button" onClick={() => setPrinting(l)} className="shrink-0 rounded-lg border border-line px-2.5 py-1 text-xs font-semibold hover:bg-paper">Print</button>
+                </div>
                 <p className="text-xs text-ink-soft">{l.kind === "issue" ? "From" : "To"} {l.warehouse}{l.by ? ` · by ${l.by}` : ""}</p>
                 <ul className="mt-1 text-ink-soft">
                   {l.lines.map((x, i) => <li key={i}>{x.quantity.toLocaleString("en-NG")} × {x.product}{x.status !== "saleable" ? ` (${x.status})` : ""}</li>)}
@@ -158,6 +163,7 @@ export function TripView({ report, mine = false }: { report: TripReport; mine?: 
           </ol>
         </Card>
       </div>
+      {printing && <DispatchNote report={report} load={printing} onClose={() => setPrinting(null)} />}
     </div>
   );
 }

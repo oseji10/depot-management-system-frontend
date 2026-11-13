@@ -71,7 +71,7 @@ export default function ProformasPage() {
             <tr key={r.id}>
               <td className="px-5 py-3.5">
                 <Link href={`/proformas/view?id=${r.id}`} className="font-mono text-xs font-bold text-[#f40009] hover:underline">{r.number}</Link>
-                <span className="block text-xs text-ink-soft">{formatDate(r.issued_on)} · {r.lines_count} item{r.lines_count === 1 ? "" : "s"}</span>
+                <span className="block text-xs text-ink-soft">{r.lines_count} item{r.lines_count === 1 ? "" : "s"}</span>
               </td>
               <td className="px-4 py-3.5">{r.customer_name}</td>
               <td className={`px-4 py-3.5 ${r.is_expired ? "font-semibold text-amber-700" : "text-ink-soft"}`}>{r.valid_until ? formatDate(r.valid_until) : "No expiry"}</td>

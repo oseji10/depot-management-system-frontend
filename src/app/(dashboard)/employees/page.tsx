@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { DeleteButton } from "../../../components/delete-button";
 import { Badge, Button, ErrorNote, Field, Modal, MoneyField, PageHeader, SearchBox, SelectField, TableEmpty, TableError, TableLoading } from "../../../components/ui";
 import { useOptions } from "../../../hooks/options";
 import { useSession } from "../../../hooks/session";
@@ -11,6 +12,7 @@ import type { Employee, PayItem, Paginated } from "../../../lib/types";
 
 export default function EmployeesPage() {
   const s = useSession();
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("active");
   const [editing, setEditing] = useState<Employee | "new" | null>(null);
@@ -32,7 +34,7 @@ export default function EmployeesPage() {
       <div className="mb-3 flex flex-wrap gap-2">
         <SearchBox value={search} onChange={setSearch} placeholder="Search by name or staff number" />
         <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm">
-          <option value="active">Current staff</option><option value="left">Left</option>
+          <option value="active">Current staff</option><option value="left">Left</option><option value="archived">Archived</option>
         </select>
       </div>
       <div className="relative overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
@@ -45,11 +47,11 @@ export default function EmployeesPage() {
               : (list.data?.data.length ?? 0) === 0 ? <TableEmpty cols={5} title="No employees" hint="Add your staff so they can be paid and charged for damages." />
               : list.data!.data.map((e) => (
                 <tr key={e.id}>
-                  <td className="px-4 py-3"><p className="font-medium">{e.name} {e.user && <Badge tone="good">Has login</Badge>} {e.status === "left" && <Badge>Left</Badge>}</p><p className="text-xs text-ink-soft">{e.staff_no}{e.phone ? ` · ${e.phone}` : ""}</p></td>
-                  <td className="px-4 py-3">{e.branch?.name ?? "–"}</td>
+                  <td className="px-4 py-3"><p className="font-medium">{e.name} {e.user && <Badge tone="good">Has login</Badge>} {e.status === "left" && <Badge>Left</Badge>}{e.status === "archived" && <Badge>Archived</Badge>}</p><p className="text-xs text-ink-soft">{e.staff_no}{e.phone ? ` · ${e.phone}` : ""}</p></td>
+                  <td className="px-4 py-3">{(e.branches?.length ? e.branches.map((b) => b.name) : [e.branch?.name ?? "–"]).join(", ")}</td>
                   <td className="px-4 py-3">{[e.job_title, e.department].filter(Boolean).join(" · ") || "–"}</td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">{formatKobo(e.basic_salary)}</td>
-                  <td className="px-4 py-3 text-right">{manage && <Button size="sm" variant="secondary" onClick={() => setEditing(e)}>Edit</Button>}</td>
+                  <td className="px-4 py-3"><div className="flex flex-wrap items-start justify-end gap-2">{manage && <Button size="sm" variant="secondary" onClick={() => setEditing(e)}>Edit</Button>}{manage && <ArchiveButton employee={e} />}{manage && <DeleteButton size="sm" path={`/employees/${e.id}`} noun="employee" onDone={() => qc.invalidateQueries({ queryKey: ["employees"] })} />}</div></td>
                 </tr>
               ))}
           </tbody>
@@ -57,6 +59,22 @@ export default function EmployeesPage() {
       </div>
       {editing && <EmployeeModal employee={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
     </>
+  );
+}
+
+function ArchiveButton({ employee }: { employee: Employee }) {
+  const qc = useQueryClient();
+  const archived = employee.status === "archived";
+  const m = useMutation({
+    mutationFn: () => api(`/employees/${employee.id}/${archived ? "unarchive" : "archive"}`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["employees"] }),
+  });
+
+  return (
+    <Button size="sm" variant="secondary" busy={m.isPending}
+      onClick={() => { if (archived || window.confirm(`Archive ${employee.name}? They will leave the list and future payroll runs, and all their records are kept. You can restore them later.`)) m.mutate(); }}>
+      {archived ? "Restore" : "Archive"}
+    </Button>
   );
 }
 
@@ -70,10 +88,11 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
   const detail = useQuery({ queryKey: ["employee", employee?.id], enabled: !!employee, queryFn: () => api<Employee>(`/employees/${employee!.id}`) });
 
   const [f, setF] = useState({
-    name: employee?.name ?? "", branch_id: String(employee?.branch_id ?? ""), phone: employee?.phone ?? "", job_title: employee?.job_title ?? "",
+    name: employee?.name ?? "", phone: employee?.phone ?? "", job_title: employee?.job_title ?? "",
     department: employee?.department ?? "", hired_on: employee?.hired_on ?? "", basic: koboToInput(employee?.basic_salary ?? 0),
     bank_name: employee?.bank_name ?? "", account_number: employee?.account_number ?? "", account_name: employee?.account_name ?? "", status: employee?.status ?? "active", user_id: String(employee?.user_id ?? ""),
   });
+  const [branchIds, setBranchIds] = useState<number[]>(employee?.branches?.length ? employee.branches.map((b) => b.id) : employee?.branch_id ? [employee.branch_id] : []);
   const [picked, setPicked] = useState<ItemState | null>(null);
   const set = (k: keyof typeof f) => (v: string) => setF((p) => ({ ...p, [k]: v }));
 
@@ -92,7 +111,7 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
         return { pay_item_id: Number(id), value: v.value === "" ? null : Math.round(Number(v.value.replace(/,/g, "")) * 100) };
       });
       const body = {
-        user_id: f.user_id ? Number(f.user_id) : null, name: f.name, branch_id: f.branch_id ? Number(f.branch_id) : null, phone: f.phone || null, job_title: f.job_title || null, department: f.department || null,
+        user_id: f.user_id ? Number(f.user_id) : null, name: f.name, branch_id: branchIds[0] ?? null, branch_ids: branchIds, phone: f.phone || null, job_title: f.job_title || null, department: f.department || null,
         hired_on: f.hired_on || null, basic_salary: nairaToKobo(f.basic), bank_name: f.bank_name || null, account_number: f.account_number || null,
         account_name: f.account_name || null, status: f.status, pay_items,
       };
@@ -108,7 +127,6 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
       <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Full name" value={f.name} onChange={(e) => set("name")(e.target.value)} required autoFocus />
-          <SelectField label="Branch" value={f.branch_id} onChange={set("branch_id")} options={[{ value: "", label: "Choose a branch" }, ...branches]} required />
           <SelectField label="Login account" value={f.user_id} onChange={set("user_id")} options={[{ value: "", label: "No login" }, ...users]} hint="Link a salesperson, driver or cashier so their pay and charges sit on one record." />
           <Field label="Job title" value={f.job_title} onChange={(e) => set("job_title")(e.target.value)} />
           <Field label="Department" value={f.department} onChange={(e) => set("department")(e.target.value)} />
@@ -117,6 +135,23 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
           <MoneyField label="Monthly basic salary" value={f.basic} onChange={set("basic")} required />
           {employee && <SelectField label="Status" value={f.status} onChange={set("status")} options={[{ value: "active", label: "Current staff" }, { value: "left", label: "Left the business" }]} />}
         </div>
+
+        <fieldset className="rounded-xl border border-line p-3">
+          <legend className="px-1 text-sm font-semibold">Branches</legend>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {branches.map((b) => {
+              const id = Number(b.value);
+              return (
+                <label key={id} className="flex min-h-9 items-center gap-2 text-sm">
+                  <input type="checkbox" className="size-4" checked={branchIds.includes(id)}
+                    onChange={(e) => setBranchIds((cur) => (e.target.checked ? [...cur, id] : cur.filter((x) => x !== id)))} />
+                  {b.label}{branchIds[0] === id && branchIds.length > 1 && <span className="text-xs text-ink-soft">(main)</span>}
+                </label>
+              );
+            })}
+          </div>
+          <p className="mt-1 text-xs text-ink-soft">Tick every branch this person works in. The first one ticked is their main branch, and payroll uses it.</p>
+        </fieldset>
 
         <fieldset className="rounded-xl border border-line p-3">
           <legend className="px-1 text-sm font-semibold">Bank details</legend>
@@ -152,7 +187,7 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
         {save.error && <ErrorNote>{(save.error as Error).message}</ErrorNote>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" busy={save.isPending}>{employee ? "Save changes" : "Add employee"}</Button>
+          <Button type="submit" busy={save.isPending} disabled={branchIds.length === 0}>{employee ? "Save changes" : "Add employee"}</Button>
         </div>
       </form>
     </Modal>

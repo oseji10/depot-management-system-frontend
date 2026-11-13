@@ -161,7 +161,7 @@ export function OverviewReport() {
           )}
 
           {d.field && (
-            <Section title="Field sales">
+            <Section title="Van sales">
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <Stat label="Trips in period" value={n(d.field.trips)} />
                 <Stat label="On the road now" value={n(d.field.on_road)} tone="blue" href="/field/trips" />

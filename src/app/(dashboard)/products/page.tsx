@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useDeferredValue, useState } from "react";
 import { ImportProductsButton } from "../../../components/import-buttons";
 import { ProductThumb, shrinkImage, useProductImage } from "../../../components/product-image";
@@ -8,6 +9,7 @@ import { Badge, Button, Field, Modal, PageHeader, SelectField, StatusBadge } fro
 import { useSession } from "../../../hooks/session";
 import { useOptions } from "../../../hooks/options";
 import { ApiError, api } from "../../../lib/api";
+import { formatQty } from "../../../lib/units";
 import type { Paginated, Product } from "../../../lib/types";
 
 const PACKAGING = [
@@ -94,8 +96,8 @@ export default function ProductsPage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Products"
-        description="Everything you buy and sell. Each product has a base unit (a bottle or a can) and optional packs such as a crate or a case."
-        action={canManage && <div className="flex gap-2"><ImportProductsButton /><Button onClick={() => setEditing("new")}>Add product</Button></div>}
+        description="Everything you buy and sell. Each product has variations: the smallest one (a bottle or a can) and bigger ones such as a quarter pack, half pack or a crate."
+        action={<div className="flex flex-wrap gap-2"><Link href="/products/history" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-4 text-sm font-semibold shadow-sm hover:bg-paper">Product history</Link>{canManage && <><ImportProductsButton /><Button onClick={() => setEditing("new")}>Add product</Button></>}</div>}
       />
 
       {/* Toolbar */}
@@ -148,7 +150,8 @@ export default function ProductsPage() {
               <th scope="col" className="px-5 py-3.5 font-semibold">Product</th>
               <th scope="col" className="px-4 py-3.5 font-semibold">Category</th>
               <th scope="col" className="px-4 py-3.5 font-semibold">Rebate category</th>
-              <th scope="col" className="px-4 py-3.5 font-semibold">Sold as</th>
+              <th scope="col" className="px-4 py-3.5 font-semibold">Variations</th>
+              <th scope="col" className="px-4 py-3.5 text-right font-semibold">In stock</th>
               <th scope="col" className="px-4 py-3.5 font-semibold">Status</th>
               <th><span className="sr-only">Actions</span></th>
             </tr>
@@ -166,7 +169,7 @@ export default function ProductsPage() {
                       </div>
                     </div>
                   </td>
-                  {[0, 1, 2, 3].map((c) => (
+                  {[0, 1, 2, 3, 4].map((c) => (
                     <td key={c} className="px-4 py-4"><div className="h-3.5 w-24 animate-pulse rounded bg-line" /></td>
                   ))}
                   <td />
@@ -174,12 +177,12 @@ export default function ProductsPage() {
               ))}
 
             {error && (
-              <tr><td colSpan={6} className={`px-4 py-10 text-center ${ERR}`}>{(error as Error).message}</td></tr>
+              <tr><td colSpan={7} className={`px-4 py-10 text-center ${ERR}`}>{(error as Error).message}</td></tr>
             )}
 
             {data?.data.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-16 text-center">
+                <td colSpan={7} className="px-4 py-16 text-center">
                   <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#ffe9ea] text-[#f40009]">
                     <Svg d={I.box} className="size-7" />
                   </span>
@@ -234,8 +237,15 @@ export default function ProductsPage() {
                       ))}
                   </div>
                 </td>
+                <td className="px-4 py-3.5 text-right">
+                  <p className={`font-semibold tabular-nums ${(p.stock_units ?? 0) <= 0 ? "text-[#c23a3a]" : ""}`}>{(p.stock_units ?? 0).toLocaleString("en-NG")}</p>
+                  {(p.stock_units ?? 0) > 0 && p.units.filter((u) => u.is_active && !u.is_base).length > 0 && (
+                    <p className="text-xs text-ink-soft">{formatQty(p.stock_units ?? 0, p.base_unit?.name ?? null, null, p.units.filter((u) => u.is_active && !u.is_base && u.unit).map((u) => ({ name: u.unit!.name, factor: u.factor })))}</p>
+                  )}
+                </td>
                 <td className="px-4 py-3.5"><StatusBadge active={p.is_active} /></td>
                 <td className="px-4 py-3.5 text-right">
+                  <Link href={`/products/history?id=${p.id}`} className="inline-flex items-center rounded-lg border border-transparent px-3 py-1.5 text-sm font-semibold text-ink-soft transition hover:border-line hover:bg-paper">History</Link>
                   {canManage && (
                     <button
                       onClick={() => setEditing(p)}
@@ -293,7 +303,7 @@ export default function ProductsPage() {
   );
 }
 
-type Pack = { unit_id: string; factor: string; barcode: string };
+type Pack = { name: string; factor: string; barcode: string };
 
 function SectionTitle({ n, title, hint }: { n: string; title: string; hint?: string }) {
   return (
@@ -321,7 +331,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
     packaging: product?.packaging ?? "other",
     category_id: String(product?.category_id ?? ""),
     rebate_category_id: String(product?.rebate_category_id ?? ""),
-    base_unit_id: String(product?.base_unit_id ?? ""),
+    base_unit_name: product?.base_unit?.name ?? "",
     barcode: product?.units.find((u) => u.is_base)?.barcode ?? "",
     units_per_case: String(product?.units_per_case ?? ""),
     is_returnable: product?.is_returnable ?? false,
@@ -334,7 +344,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   const [packs, setPacks] = useState<Pack[]>(
     (product?.units ?? [])
       .filter((u) => !u.is_base && u.is_active)
-      .map((u) => ({ unit_id: String(u.unit_id), factor: String(u.factor), barcode: u.barcode ?? "" })),
+      .map((u) => ({ name: u.unit?.name ?? "", factor: String(u.factor), barcode: u.barcode ?? "" })),
   );
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -361,7 +371,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   const containerTypes = useQuery({ queryKey: ["container-types"], queryFn: () => api<{ data: { id: number; name: string; kind: string }[] }>("/container-types") });
   const ofKind = (k: string) => (containerTypes.data?.data ?? []).filter((c) => c.kind === k).map((c) => ({ value: c.id, label: c.name }));
 
-  const baseUnitName = units.find((u) => String(u.value) === v.base_unit_id)?.label ?? "base unit";
+  const baseUnitName = v.base_unit_name.trim() || "bottle";
 
   const save = useMutation({
     mutationFn: () => {
@@ -382,10 +392,10 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
         crate_container_id: v.is_returnable && v.crate_container_id ? Number(v.crate_container_id) : null,
         is_active: v.is_active,
         units: packs
-          .filter((p) => p.unit_id)
-          .map((p) => ({ unit_id: Number(p.unit_id), factor: Number(p.factor), barcode: p.barcode || null })),
+          .filter((p) => p.name.trim())
+          .map((p) => ({ name: p.name.trim(), factor: Number(p.factor), barcode: p.barcode || null })),
       };
-      if (isNew || Number(v.base_unit_id) !== product.base_unit_id) body.base_unit_id = Number(v.base_unit_id);
+      if (isNew || v.base_unit_name.trim().toLowerCase() !== (product.base_unit?.name ?? "").toLowerCase()) body.base_unit_name = v.base_unit_name.trim();
 
       return (isNew ? api<Product>("/products", { method: "POST", body }) : api<Product>(`/products/${product.id}`, { method: "PUT", body })).then(async (saved) => {
         const id = saved.id ?? product?.id;
@@ -402,6 +412,15 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   });
 
   const updatePack = (i: number, patch: Partial<Pack>) => setPacks((cur) => cur.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
+
+  // One tap adds a fraction of the biggest variation, e.g. a half or quarter of a 24-can pack.
+  const biggest = Math.max(0, ...packs.map((p) => Number(p.factor) || 0));
+  const fractions = [[2, "Half"], [4, "Quarter"]] as const;
+  const addFraction = (div: number, word: string) => {
+    const top = packs.reduce<Pack | null>((best, p) => (!best || Number(p.factor) > Number(best.factor) ? p : best), null);
+    if (!top) return;
+    setPacks((cur) => [...cur, { name: `${word} ${top.name.toLowerCase()}`, factor: String(Math.floor(biggest / div)), barcode: "" }]);
+  };
 
   const toggleRow =
     "flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-white p-3.5 text-sm transition hover:border-[#ff3b3f]/40 hover:bg-[#fff5f5] has-[:checked]:border-[#ff3b3f]/50 has-[:checked]:bg-[#fff1f1]";
@@ -464,32 +483,33 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
           </div>
         </section>
 
-        {/* 3 — Units */}
+        {/* 3 — Variations */}
         <section className="rounded-2xl border border-line bg-[#fffafa] p-4">
-          <SectionTitle n="3" title="Units & packs" hint="Stock is counted in the base unit; packs are bigger ways to sell it." />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SelectField label="Base unit" value={v.base_unit_id} onChange={(x) => { set("base_unit_id", x); setPacks((cur) => cur.filter((p) => p.unit_id !== x)); }}
-              options={[{ value: "", label: "Select a unit" }, ...units]} required={isNew}
-              hint={isNew ? "What stock is counted in, e.g. Bottle or Can." : "Can only be changed while the product has no stock, sales or purchases. Re-check the packs below if you change it."}
-              error={errors.base_unit_id?.[0]} />
-            <Field label={`Barcode (${baseUnitName})`} value={v.barcode} onChange={text("barcode")} />
-            <Field label={`${baseUnitName}s in a physical case`} inputMode="numeric" value={v.units_per_case} onChange={text("units_per_case")}
-              error={errors.units_per_case?.[0]} hint="How Coca-Cola counts volume for rebates. Leave empty to use the largest pack." />
+          <SectionTitle n="3" title="Variations" hint="The ways this product is sold. Stock is counted in the smallest one, so any bigger variation can be split back into it." />
+          <datalist id="variation-names">{units.map((u) => <option key={u.value} value={u.label} />)}</datalist>
+
+          <div className="rounded-xl border border-line bg-white p-3.5 shadow-sm">
+            <p className="mb-2 text-xs font-semibold tracking-wide text-ink-soft uppercase">Smallest variation (1 each)</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Name" list="variation-names" value={v.base_unit_name} onChange={(e) => set("base_unit_name", e.target.value)} required
+                placeholder="Bottle, Can…" error={errors.base_unit_id?.[0] ?? errors.base_unit_name?.[0]}
+                hint={isNew ? "What stock is counted in." : "Can only be renamed to a different one while the product has no stock, sales or purchases."} />
+              <Field label="Barcode" value={v.barcode} onChange={text("barcode")} />
+            </div>
           </div>
 
-          <p className="mt-5 mb-2 text-sm font-semibold">Also sold as</p>
+          <p className="mt-5 mb-2 text-sm font-semibold">Bigger variations</p>
           <div className="space-y-3">
             {packs.length === 0 && (
               <p className="rounded-xl border border-dashed border-line bg-white px-4 py-3 text-sm text-ink-soft">
-                No packs yet. Add a crate or case if you sell this in bulk.
+                None yet. Add a crate, a pack, or a half or quarter pack if you sell this in bulk.
               </p>
             )}
             {packs.map((p, i) => (
-              <div key={i} className="grid gap-3 rounded-xl border border-line bg-white p-3.5 shadow-sm sm:grid-cols-[1fr_7rem_1fr_auto] sm:items-end">
-                <SelectField label="Unit" value={p.unit_id} onChange={(x) => updatePack(i, { unit_id: x })}
-                  options={[{ value: "", label: "Select" }, ...units.filter((u) => String(u.value) !== v.base_unit_id)]}
+              <div key={i} className="grid gap-3 rounded-xl border border-line bg-white p-3.5 shadow-sm sm:grid-cols-[1fr_8rem_1fr_auto] sm:items-end">
+                <Field label="Name" list="variation-names" value={p.name} onChange={(e) => updatePack(i, { name: e.target.value })} placeholder="Crate, Half pack…"
                   error={errors[`units.${i}.unit_id`]?.[0]} />
-                <Field label={`${baseUnitName}s inside`} inputMode="numeric" value={p.factor} onChange={(e) => updatePack(i, { factor: e.target.value })}
+                <Field label={`${baseUnitName}s inside`} inputMode="numeric" value={p.factor} onChange={(e) => updatePack(i, { factor: e.target.value.replace(/[^\d]/g, "") })}
                   error={errors[`units.${i}.factor`]?.[0]} />
                 <Field label="Barcode" value={p.barcode} onChange={(e) => updatePack(i, { barcode: e.target.value })} />
                 <button type="button" onClick={() => setPacks((cur) => cur.filter((_, idx) => idx !== i))}
@@ -500,11 +520,20 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
             ))}
           </div>
           {errors.units?.[0] && <p role="alert" className={`mt-2 text-xs ${ERR}`}>{errors.units[0]}</p>}
-          {packs.length < 6 && (
-            <Button type="button" variant="secondary" className="mt-3" onClick={() => setPacks((cur) => [...cur, { unit_id: "", factor: "", barcode: "" }])}>
-              <Svg d={I.plus} /> Add a pack
-            </Button>
-          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {packs.length < 6 && (
+              <Button type="button" variant="secondary" onClick={() => setPacks((cur) => [...cur, { name: "", factor: "", barcode: "" }])}>
+                <Svg d={I.plus} /> Add a variation
+              </Button>
+            )}
+            {packs.length > 0 && packs.length < 6 && fractions.filter(([d]) => biggest % d === 0 && biggest / d >= 2).map(([d, word]) => (
+              <Button key={word} type="button" variant="secondary" onClick={() => addFraction(d, word)}>{`${word} of the biggest (${biggest / d})`}</Button>
+            ))}
+          </div>
+          <div className="mt-4">
+            <Field label={`${baseUnitName}s in a physical case`} inputMode="numeric" value={v.units_per_case} onChange={text("units_per_case")}
+              error={errors.units_per_case?.[0]} hint="How Coca-Cola counts volume for rebates. Leave empty to use the biggest variation." />
+          </div>
         </section>
 
         {/* 4 — Options */}

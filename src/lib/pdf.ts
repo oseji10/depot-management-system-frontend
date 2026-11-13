@@ -104,3 +104,101 @@ export function downloadBlob(filename: string, blob: Blob) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
+
+export type ReceiptPdfInput = {
+  business: { name: string; lines: string[] };
+  title: string; // RECEIPT or INVOICE
+  meta: [string, string][]; // label / value pairs under the number
+  number: string;
+  when: string;
+  items: { name: string; detail: string; total: string }[];
+  totals: { label: string; value: string; bold?: boolean }[];
+  note?: string;
+  footer?: string;
+};
+
+/** A narrow one-page receipt (80 mm wide, as long as it needs to be), so it reads well in WhatsApp and prints on a till roll. */
+export function receiptPdf(r: ReceiptPdfInput, logo?: Logo | null): Blob {
+  const W2 = 227, M2 = 12, inner = W2 - 2 * M2;
+  type Op = { t: "text"; s: string; x: number; y: number; size: number; bold: boolean; align: "l" | "r" | "c" } | { t: "rule"; y: number; dashed?: boolean };
+  const ops: Op[] = [];
+  let y = M2;
+  const cw = (size: number) => size * 0.5;
+  const wrap = (s: string, size: number, width: number) => {
+    const max = Math.max(8, Math.floor(width / cw(size)));
+    const words = esc(s).split(/\s+/).filter(Boolean);
+    const rows: string[] = [];
+    let cur = "";
+    for (const w of words) {
+      if ((cur + " " + w).trim().length > max) { if (cur) rows.push(cur); cur = w.slice(0, max); } else cur = (cur + " " + w).trim();
+    }
+    if (cur) rows.push(cur);
+    return rows.length ? rows : [""];
+  };
+  const put = (s: string, size: number, o: { bold?: boolean; align?: "l" | "r" | "c"; x?: number; width?: number; gap?: number } = {}) => {
+    const rows = wrap(s, size, o.width ?? inner);
+    for (const row of rows) { y += size; ops.push({ t: "text", s: row, x: o.x ?? M2, y, size, bold: !!o.bold, align: o.align ?? "l" }); y += (o.gap ?? 2.5); }
+  };
+  const pair = (a: string, b: string, size = 8.5, bold = false) => {
+    const right = esc(b);
+    const left = wrap(a, size, inner - right.length * cw(size) - 8);
+    left.forEach((row, i) => {
+      y += size;
+      ops.push({ t: "text", s: row, x: M2, y, size, bold, align: "l" });
+      if (i === 0) ops.push({ t: "text", s: right, x: M2, y, size, bold, align: "r" });
+      y += 2.5;
+    });
+  };
+  const rule = (dashed = true) => { y += 3; ops.push({ t: "rule", y, dashed }); y += 5; };
+
+  let logoH = 0, logoW = 0;
+  if (logo) { const k = Math.min(40 / logo.h, 120 / logo.w); logoW = logo.w * k; logoH = logo.h * k; }
+  const logoY = y;
+  if (logo) y += logoH + 4;
+  put(r.business.name, 12, { bold: true, align: "c" });
+  r.business.lines.forEach((l) => put(l, 7.5, { align: "c" }));
+  rule();
+  put(`${r.title} ${r.number}`, 9.5, { bold: true, align: "c" });
+  put(r.when, 8, { align: "c" });
+  y += 2;
+  r.meta.forEach(([a, b]) => pair(a, b, 8));
+  rule();
+  r.items.forEach((it) => { pair(it.name, it.total, 8.5, true); put(it.detail, 7.5, { gap: 4 }); });
+  rule();
+  r.totals.forEach((t) => pair(t.label, t.value, t.bold ? 10 : 8.5, !!t.bold));
+  if (r.note) { y += 3; put(r.note, 8, { bold: true }); }
+  rule();
+  put(r.footer ?? "Thank you for your patronage.", 8, { align: "c" });
+  const H2 = Math.ceil(y + M2);
+
+  let c = "";
+  const X = (op: Extract<Op, { t: "text" }>) => {
+    const tw = op.s.length * cw(op.size);
+    return op.align === "r" ? W2 - M2 - tw : op.align === "c" ? (W2 - tw) / 2 : op.x;
+  };
+  if (logo) c += `q ${logoW.toFixed(1)} 0 0 ${logoH.toFixed(1)} ${((W2 - logoW) / 2).toFixed(1)} ${(H2 - logoY - logoH).toFixed(1)} cm /Im1 Do Q\n`;
+  for (const op of ops) {
+    if (op.t === "rule") c += `0.6 G ${op.dashed ? "[2 2] 0 d" : "[] 0 d"} ${M2} ${(H2 - op.y).toFixed(1)} m ${W2 - M2} ${(H2 - op.y).toFixed(1)} l S\n`;
+    else c += `BT /${op.bold ? "F2" : "F1"} ${op.size} Tf ${X(op).toFixed(1)} ${(H2 - op.y).toFixed(1)} Td (${op.s.replace(/([\\()])/g, "\\$1")}) Tj ET\n`;
+  }
+
+  const objs: string[] = [];
+  objs[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objs[2] = "<< /Type /Pages /Kids [5 0 R] /Count 1 >>";
+  objs[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
+  objs[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>";
+  const xo = logo ? " /XObject << /Im1 7 0 R >>" : "";
+  objs[5] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W2} ${H2}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xo} >> /Contents 6 0 R >>`;
+  objs[6] = `<< /Length ${c.length} >>\nstream\n${c}endstream`;
+  if (logo) {
+    const data = Array.from(logo.bytes, (b) => String.fromCharCode(b)).join("");
+    objs[7] = `<< /Type /XObject /Subtype /Image /Width ${logo.w} /Height ${logo.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logo.bytes.length} >>\nstream\n${data}\nendstream`;
+  }
+  let pdf = "%PDF-1.4\n";
+  const off: number[] = [];
+  for (let i = 1; i < objs.length; i++) { off[i] = pdf.length; pdf += `${i} 0 obj\n${objs[i]}\nendobj\n`; }
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objs.length}\n0000000000 65535 f \n` + off.slice(1).map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("");
+  pdf += `trailer\n<< /Size ${objs.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return new Blob([Uint8Array.from(pdf, (ch) => ch.charCodeAt(0) & 255)], { type: "application/pdf" });
+}

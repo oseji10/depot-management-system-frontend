@@ -122,6 +122,7 @@ export type ProductUnit = {
 
 export type Product = {
   id: number;
+  stock_units?: number;
   sku: string;
   name: string;
   brand: string | null;
@@ -174,7 +175,7 @@ export type Pack = { name: string; factor: number };
 
 export type OnHandRow = {
   warehouse: { id: number; name: string };
-  product: { id: number; name: string; sku: string; size_label: string | null; category: string | null; base_unit: string | null; pack: Pack | null };
+  product: { id: number; name: string; sku: string; size_label: string | null; category: string | null; base_unit: string | null; pack: Pack | null; packs?: Pack[] };
   saleable: number;
   damaged: number;
   expired: number;
@@ -567,7 +568,7 @@ export type Sale = {
   lines?: SaleLine[];
   payments?: SalePayment[];
   returned_total?: number;
-  returns?: { id: number; number: string; returned_at: string; total: number; applied_to_balance: number; refunded: number; refund_method: "cash" | "transfer" | null }[];
+  returns?: { id: number; number: string; returned_at: string; total: number; applied_to_balance: number; refunded: number; exchange_credit?: number; refund_method: "cash" | "transfer" | "exchange" | null }[];
 };
 
 export type SalesSummary = {
@@ -864,7 +865,7 @@ export type ExpiryReport = {
 export type Employee = {
   id: number; staff_no: string; name: string; phone: string | null; job_title: string | null; department: string | null;
   user_id: number | null; user?: { id: number; name: string; email: string } | null;
-  branch_id: number; branch?: { id: number; name: string } | null; hired_on: string | null; left_on: string | null; status: "active" | "left";
+  branch_id: number; branch?: { id: number; name: string } | null; branches?: { id: number; name: string }[]; hired_on: string | null; left_on: string | null; status: "active" | "left" | "archived";
   basic_salary: number; bank_name: string | null; account_number: string | null; account_name: string | null; notes: string | null;
   pay_items?: { pay_item_id: number; value: number | null }[];
   charges?: { id: number; number: string; reason: string; description: string; amount: number; recovered: number; installments: number; status: string }[];
@@ -972,7 +973,7 @@ export type Statement = {
 
 export type SaleReturnLineRow = { id: number; quantity: number; unit_price: number; line_total: number; product?: { id: number; name: string; sku: string | null }; unit?: { id: number; name: string } };
 export type SaleReturnDoc = {
-  id: number; number: string; returned_at: string; reason: string; restock_status: "saleable" | "damaged"; total: number; applied_to_balance: number; refunded: number; refund_method: "cash" | "transfer" | null;
+  id: number; number: string; returned_at: string; reason: string; restock_status: "saleable" | "damaged"; total: number; applied_to_balance: number; refunded: number; exchange_credit?: number; refund_method: "cash" | "transfer" | "exchange" | null;
   sale?: { id: number; number: string; sold_at: string }; customer?: { id: number; name: string; phone: string | null } | null; creator?: { id: number; name: string }; lines?: SaleReturnLineRow[];
 };
 export type ReturnableLine = { sale_line_id: number; product: string | null; unit: string | null; factor: number; unit_price: number; sold: number; returned: number; left: number };

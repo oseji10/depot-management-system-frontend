@@ -109,7 +109,7 @@ export default function StockOnHandPage() {
                     </td>
                     <td className="px-4 py-3">{r.warehouse.name}</td>
                     <td className="px-4 py-3 text-right">
-                      <p className="font-medium">{formatQty(r.saleable, r.product.base_unit, r.product.pack)}</p>
+                      <p className="font-medium">{formatQty(r.saleable, r.product.base_unit, r.product.pack, r.product.packs)}</p>
                       {r.product.pack && r.saleable >= r.product.pack.factor && <p className="text-xs text-ink-soft">{r.saleable} {r.product.base_unit}s</p>}
                     </td>
                     <td className="px-4 py-3 text-right">{r.damaged || <span className="text-ink-soft">–</span>}</td>

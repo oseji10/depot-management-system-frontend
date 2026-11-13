@@ -29,12 +29,11 @@ function SchedulePage() {
   const run = useQuery({ queryKey: ["payroll-run", id], enabled: !!id, queryFn: () => api<PayrollRun>(`/payroll-runs/${id}`) });
   const r = run.data;
   const [pdfBusy, setPdfBusy] = useState(false);
-  const [pdfOk, setPdfOk] = useState<string | null>(null);
   const [pdfNote, setPdfNote] = useState<string | null>(null);
   /** Uses the business details as the server holds them right now, not the copy cached on this device. */
   const makePdf = async () => {
     if (!r) return;
-    setPdfBusy(true); setPdfNote(null); setPdfOk(null);
+    setPdfBusy(true); setPdfNote(null);
     try {
       const st = (await api<Session>("/auth/me")).store;
       const logo = st?.logo_url ? await fetch(`${API_URL}${st.logo_url}`, { headers: authHeaders() }).then((x) => (x.ok ? x.blob() : null)).catch(() => null) : null;
@@ -42,7 +41,6 @@ function SchedulePage() {
       const missing = [!st?.name && "name", !st?.logo_url && "logo", !st?.phone && "phone", !st?.email && "email"].filter(Boolean);
       if (missing.length) setPdfNote(`Your business ${missing.join(", ")} ${missing.length === 1 ? "is" : "are"} not saved yet, so ${missing.length === 1 ? "it" : "they"} can't appear on the PDF. Add ${missing.length === 1 ? "it" : "them"} on the My business page.`);
       else if (logo && !jpeg) setPdfNote("The logo could not be read, so it was left off the PDF. Try uploading it again as PNG or JPEG.");
-      setPdfOk(`PDF header used: ${st?.name || "(no name)"} · ${st?.phone || "(no phone)"} · ${st?.email || "(no email)"} · logo ${jpeg ? "included" : "not included"}`);
       downloadBlob(`salary-schedule-${r.period}.pdf`, tablePdf({
         title: `Salary schedule - ${monthLabel(r.period)}`, subtitle: `${r.number} - ${RUN_LABEL[r.status]} - ${rows.length} staff`,
         head: ["Employee", "Bank", "Account", "Basic", "Sales reward", "Other", "Deductions", "Net pay"],
@@ -83,8 +81,6 @@ function SchedulePage() {
         <SelectField label="Payroll month" value={id} onChange={setChosen}
           options={usable.length ? usable.map((x) => ({ value: x.id, label: `${monthLabel(x.period)} · ${RUN_LABEL[x.status]} · ${x.number}` })) : [{ value: "", label: runs.isLoading ? "Loading…" : "No payroll runs yet" }]} />
       </div>
-
-      {pdfOk && <p className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-900 print:hidden">{pdfOk}</p>}
       {pdfNote && <div className="mb-3"><ErrorNote>{pdfNote}</ErrorNote></div>}
       {r && (
         <>

@@ -5,9 +5,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Receipt } from "../../../../components/receipt";
 import { Button, ICON, Svg } from "../../../../components/ui";
-import { WhatsAppButton } from "../../../../components/whatsapp-button";
+import { ReceiptShareButton } from "../../../../components/receipt-share-button";
 import { usePayTo } from "../../../../hooks/pay-to";
-import { saleMessage } from "../../../../lib/share";
 import { useSession } from "../../../../hooks/session";
 import { api } from "../../../../lib/api";
 import type { Sale } from "../../../../lib/types";
@@ -42,7 +41,7 @@ function ReceiptPage() {
       <div className="mx-auto mb-5 flex max-w-sm items-center justify-between gap-2 print:hidden">
         <Link href={`/sales/view?id=${id}`} className="text-sm font-semibold text-[#f40009] hover:underline">← Back to sale</Link>
         <div className="flex flex-wrap gap-2">
-          <WhatsAppButton phone={doc.data.customer?.phone} text={saleMessage(doc.data, s.store?.name ?? "", payTo).text} label={doc.data.status !== "void" && doc.data.balance_due > 0 ? "Send invoice" : "Send on WhatsApp"} />
+          <ReceiptShareButton sale={doc.data} store={s.store} payTo={payTo} />
           <Button onClick={() => window.print()}><Svg d={ICON.print} /> Print</Button>
         </div>
       </div>

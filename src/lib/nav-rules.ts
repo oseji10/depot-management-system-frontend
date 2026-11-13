@@ -19,7 +19,6 @@ export const NAV_RULES: NavRule[] = [
   { href: "/products", label: "Products", perm: "products.view" },
   { href: "/categories", label: "Categories", perm: "products.view" },
   { href: "/rebate-categories", label: "Rebate categories", perm: "products.view" },
-  { href: "/units", label: "Units", perm: "products.view" },
   { href: "/price-lists", label: "Price lists", perm: "pricing.view" },
   { href: "/promotions", label: "Promotions", perm: "pricing.view" },
   { href: "/suppliers", label: "Suppliers", perm: "purchasing.view" },

@@ -11,9 +11,8 @@ import { formatDateTime, formatKobo, koboToInput, nairaToKobo } from "../../../.
 import { CHANNEL_LABEL, METHOD_PAY_LABEL, PAYMENT_LABEL, PAYMENT_TONE } from "../../../../lib/status";
 import type { ReturnableLine, Sale, TerminalChoice, TransferAccount } from "../../../../lib/types";
 import { terminalOf } from "../../../../components/terminal-select";
-import { WhatsAppButton } from "../../../../components/whatsapp-button";
+import { ReceiptShareButton } from "../../../../components/receipt-share-button";
 import { usePayTo } from "../../../../hooks/pay-to";
-import { saleMessage } from "../../../../lib/share";
 import { TransferTarget, transferPayload, transferReady, type TransferValue } from "../../../../components/transfer-target";
 import { useIdParam } from "../../../../hooks/id-param";
 import { withSuspense } from "../../../../components/suspense-page";
@@ -46,7 +45,7 @@ function SaleDetailPage() {
         action={
           <div className="flex flex-wrap gap-2">
             <Link href={`/sales/receipt?id=${sale.id}`}><Button variant="secondary"><Svg d={ICON.print} /> Receipt</Button></Link>
-            <WhatsAppButton phone={sale.customer?.phone} text={saleMessage(sale, s.store?.name ?? "", payTo).text} label={live && sale.balance_due > 0 ? "Send invoice on WhatsApp" : "Send receipt on WhatsApp"} />
+            <ReceiptShareButton sale={sale} store={s.store} payTo={payTo} />
             {live && sale.balance_due > 0 && s.can("sales.create") && <Button onClick={() => setDialog("pay")}><Svg d={ICON.cash} /> {sale.payment_status === "unpaid" ? "Confirm payment received" : "Record payment"}</Button>}
             {live && s.can("sales.refund") && !!sale.lines?.length && <Button variant="secondary" onClick={() => setDialog("return")}>Return items</Button>}
             {live && s.can("sales.refund") && <Button variant="danger" onClick={() => setDialog("void")}>Void sale</Button>}
@@ -109,7 +108,7 @@ function SaleDetailPage() {
               {sale.returns.map((r) => (
                 <tr key={r.id}>
                   <td className="px-5 py-3.5"><Link href={`/returns/view?id=${r.id}`} className="font-semibold hover:underline">{r.number}</Link><span className="block text-xs text-ink-soft">{formatDateTime(r.returned_at)}</span></td>
-                  <td className="px-4 py-3.5 text-ink-soft">{r.refunded > 0 ? `${formatKobo(r.refunded)} paid back (${r.refund_method})` : "Taken off the balance"}</td>
+                  <td className="px-4 py-3.5 text-ink-soft">{r.refunded > 0 ? `${formatKobo(r.refunded)} paid back (${r.refund_method})` : (r.exchange_credit ?? 0) > 0 ? `${formatKobo(r.exchange_credit!)} kept as exchange credit` : "Taken off the balance"}</td>
                   <td className="px-4 py-3.5 text-right font-semibold">{formatKobo(r.total)}</td>
                 </tr>
               ))}
@@ -223,8 +222,8 @@ function ReturnModal({ sale, onClose, onDone }: { sale: Sale; onClose: () => voi
         </div>
         <Field label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} required />
         <SelectField label="Condition of the goods" value={restock} onChange={setRestock} options={[{ value: "saleable", label: "Good, put back on the shelf" }, { value: "damaged", label: "Damaged, keep apart" }]} />
-        <p className="rounded-xl bg-surface p-3 text-sm">Credit value <b>{formatKobo(total)}</b>. {applied > 0 && <>{formatKobo(applied)} comes off what the customer owes. </>}{refund > 0 && <>{formatKobo(refund)} is paid back to them.</>}</p>
-        {refund > 0 && <SelectField label="Paid back by" value={method} onChange={setMethod} options={[{ value: "cash", label: "Cash" }, { value: "transfer", label: "Bank transfer" }]} />}
+        <p className="rounded-xl bg-surface p-3 text-sm">Credit value <b>{formatKobo(total)}</b>. {applied > 0 && <>{formatKobo(applied)} comes off what the customer owes. </>}{refund > 0 && (method === "exchange" ? <>{formatKobo(refund)} is kept as exchange credit on their account. No money goes back.</> : <>{formatKobo(refund)} is paid back to them.</>)}</p>
+        {refund > 0 && <SelectField label="Paid back by" value={method} onChange={setMethod} options={[{ value: "cash", label: "Cash" }, { value: "transfer", label: "Bank transfer" }, { value: "exchange", label: "Exchange" }]} />}
         {run.error && <ErrorNote>{(run.error as Error).message}</ErrorNote>}
         <div className="flex justify-end gap-2 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>

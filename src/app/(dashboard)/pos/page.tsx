@@ -16,9 +16,8 @@ import { formatKobo, koboToInput, nairaToKobo } from "../../../lib/format";
 import { CHANNEL_LABEL, METHOD_PAY_LABEL } from "../../../lib/status";
 import { TerminalSelect, terminalOf } from "../../../components/terminal-select";
 import { TransferTarget, transferPayload, transferReady, type TransferValue } from "../../../components/transfer-target";
-import { WhatsAppButton } from "../../../components/whatsapp-button";
+import { ReceiptShareButton } from "../../../components/receipt-share-button";
 import { usePayTo } from "../../../hooks/pay-to";
-import { saleMessage } from "../../../lib/share";
 import { EmptiesPanel } from "../../../components/empties-panel";
 import { emptiesPayload, emptiesPlan } from "../../../lib/empties";
 import { ProductThumb } from "../../../components/product-image";
@@ -541,7 +540,7 @@ function CounterPos() {
             <a href={`/sales/receipt?id=${done.sale.id}&print=1`} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line bg-white px-4 text-sm font-semibold shadow-sm transition hover:border-[#ff3b3f]/40 hover:bg-[#fff5f5]"><Svg d={ICON.print} /> Print receipt</a>
             <Button onClick={() => { setDone(null); focusIfDesktop(searchRef.current); }}>New sale</Button>
           </div>
-          <WhatsAppButton className="mt-2 w-full" phone={done.sale.customer?.phone} text={saleMessage(done.sale, s.store?.name ?? "", payTo).text} label={done.sale.balance_due > 0 ? "Send invoice on WhatsApp" : "Send receipt on WhatsApp"} />
+          <ReceiptShareButton className="mt-2 w-full" sale={done.sale} store={s.store} payTo={payTo} />
           <p className="mt-3 text-center text-sm"><Link href={`/sales/view?id=${done.sale.id}`} className="font-semibold text-[#f40009] hover:underline">View sale details</Link></p>
         </Modal>
       )}

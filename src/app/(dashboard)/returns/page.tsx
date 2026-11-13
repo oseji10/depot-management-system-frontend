@@ -37,7 +37,7 @@ export default function ReturnsPage() {
               <td className="px-4 py-3.5">{r.sale && <Link href={`/sales/view?id=${r.sale.id}`} className="hover:underline">{r.sale.number}</Link>}</td>
               <td className="px-4 py-3.5">{r.customer?.name ?? "Walk-in"}</td>
               <td className="px-4 py-3.5 text-right font-semibold">{formatKobo(r.total)}</td>
-              <td className="px-4 py-3.5 text-right">{r.refunded ? formatKobo(r.refunded) : "–"}</td>
+              <td className="px-4 py-3.5 text-right">{r.refunded ? formatKobo(r.refunded) : (r.exchange_credit ?? 0) > 0 ? `${formatKobo(r.exchange_credit!)} (exchange)` : "–"}</td>
             </tr>
           ))}
         </tbody>
