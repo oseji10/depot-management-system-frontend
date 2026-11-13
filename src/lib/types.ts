@@ -12,6 +12,8 @@ export type Session = {
   };
   store: { id: number; name: string; slug: string; currency: string; timezone: string; logo_url?: string | null; address?: string | null; phone?: string | null; email?: string | null; disabled_menus?: string[] } | null;
   branch: { id: number; name: string; code: string } | null;
+  /** Branch logins: every branch they may switch between. */
+  branches?: { id: number; name: string }[];
   subscription?: SubscriptionState | null;
   level: Level;
   /** Set for van salesmen: the van they sell from. */
@@ -71,6 +73,7 @@ export type AppUser = {
   is_active: boolean;
   branch_id: number | null;
   branch?: { id: number; name: string } | null;
+  branches?: { id: number; name: string }[];
   store?: { id: number; name: string } | null;
   role?: { id: number; name: string } | null;
   last_login_at: string | null;
@@ -997,7 +1000,7 @@ export type PlatformSubscriptions = {
 };
 
 export type MyBusinesses = { current: number; data: { id: number; name: string; is_owner: boolean }[]; owned: number; allowed: number; can_create: boolean };
-export type WorkspaceOptions = { branches: { id: number; name: string }[]; warehouses: { id: number; name: string; branch_id: number }[] };
+export type WorkspaceOptions = { locked?: boolean; branches: { id: number; name: string }[]; warehouses: { id: number; name: string; branch_id: number }[] };
 
 /** One product target for one van salesman in a month, and how far they have got. */
 export type TargetLine = {

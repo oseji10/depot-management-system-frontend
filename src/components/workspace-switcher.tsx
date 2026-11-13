@@ -73,7 +73,7 @@ export function ScopeSwitcher() {
   const qc = useQueryClient();
   const cacheKey = `depot.workspace.${s.store?.id ?? 0}`;
   const q = useQuery({
-    queryKey: ["workspace-options"], enabled: s.level === "store" && !!s.store, retry: 1,
+    queryKey: ["workspace-options"], enabled: !!s.store && (s.level === "store" || (s.level === "branch" && (s.branches?.length ?? 0) > 1)), retry: 1,
     queryFn: async () => {
       const fresh = await api<WorkspaceOptions>("/workspace/options");
       try { localStorage.setItem(cacheKey, JSON.stringify(fresh)); } catch { /* private mode */ }
@@ -84,9 +84,12 @@ export function ScopeSwitcher() {
   let remembered: WorkspaceOptions | undefined;
   try { remembered = JSON.parse(localStorage.getItem(cacheKey) ?? "null") ?? undefined; } catch { remembered = undefined; }
   const d = q.data ?? remembered;
-  const branch = getBranchId() ?? "";
+  const locked = s.level === "branch";
+  // A branch login always works in one of its branches: default to its main one.
+  const branch = getBranchId() ?? (locked ? String(s.branch?.id ?? "") : "");
   const warehouse = getWarehouseId() ?? "";
 
+  if (locked && (s.branches?.length ?? 0) < 2) return null;
   const single = !!d && d.branches.length === 1;   // one branch: no point asking which, go straight to its warehouses
   if (!d && q.error) return <p className="px-4 pb-3 text-xs text-white">Could not load branches: {(q.error as Error).message}</p>;
   if (!d || (d.branches.length < 2 && d.warehouses.length < 2)) return null;
@@ -99,7 +102,7 @@ export function ScopeSwitcher() {
       {!single && <div>
         <label htmlFor="branch-switch" className={labelClass}>Branch</label>
         <select id="branch-switch" value={branch} className={selectClass} onChange={(e) => apply(e.target.value, "")}>
-          <option value="" className="text-ink">All branches</option>
+          {!locked && <option value="" className="text-ink">All branches</option>}
           {d.branches.map((b) => <option key={b.id} value={b.id} className="text-ink">{b.name}</option>)}
         </select>
       </div>}

@@ -31,14 +31,15 @@ export default function UsersPage() {
     <CrudPage<AppUser>
       title="Users"
       noun="user"
-      description="Assign each person to a branch, or leave the branch empty to give them access to the whole store."
+      description="Tick the branches each person works in, or none to give them the whole business. Someone with several branches can switch between them."
       endpoint="/users"
       canCreate={s.can("users.create")}
       canEdit={s.can("users.update")}
       initial={{ is_active: true }}
       toForm={(u) => ({
         name: u.name, phone: u.phone ?? "", password: "", is_active: u.is_active,
-        role_id: u.role?.id ?? "", branch_id: u.branch_id ?? "",
+        role_id: u.role?.id ?? "",
+        branch_ids: [...new Set([...(u.branch_id ? [u.branch_id] : []), ...(u.branches ?? []).map((b) => b.id)])],
       })}
       columns={[
         {
@@ -54,7 +55,7 @@ export default function UsersPage() {
         {
           header: "Access",
           cell: (u) =>
-            u.branch ? u.branch.name : <Badge tone="neutral">All branches</Badge>,
+            u.branch ? [u.branch.name, ...(u.branches ?? []).filter((b) => b.id !== u.branch_id).map((b) => b.name)].join(", ") : <Badge tone="neutral">All branches</Badge>,
         },
         ...(s.isPlatform ? [{ header: "Store", cell: (u: AppUser) => u.store?.name ?? "Platform" }] : []),
         { header: "Last sign-in", cell: (u) => (u.last_login_at ? formatDateTime(u.last_login_at) : "Never") },
@@ -68,9 +69,9 @@ export default function UsersPage() {
         { name: "password", label: "Password", type: "password", required: true, hint: "At least 8 characters. Leave blank when editing to keep the current one." },
         { name: "role_id", label: "Role", type: "select", required: true,
           optionsFrom: { endpoint: "/roles", empty: "Select a role" } },
-        { name: "branch_id", label: "Branch", type: "select",
-          hint: s.level === "branch" ? "New users are placed in your branch." : undefined,
-          optionsFrom: { endpoint: "/branches", empty: "All branches (whole store)" } },
+        { name: "branch_ids", label: "Branches", type: "multicheck",
+          hint: s.level === "branch" ? "You can give them any of your own branches." : "None ticked = the whole business. The first one ticked is where they start.",
+          optionsFrom: { endpoint: "/branches" } },
         { name: "is_active", label: "User can sign in", type: "checkbox" },
       ]}
     />

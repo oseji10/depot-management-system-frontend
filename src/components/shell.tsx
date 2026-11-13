@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useSession } from "../hooks/session";
 import { api } from "../lib/api";
-import { setStoreId, signOutLocally } from "../lib/auth";
+import { getBranchId, setStoreId, signOutLocally } from "../lib/auth";
 import { NotificationBell, NotificationToasts } from "./notifications";
 import { useProductImage } from "./product-image";
 import { useOffline } from "./offline-provider";
@@ -237,7 +237,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
   }
 
   const scopeLabel =
-    s.level === "platform" ? "Platform admin" : s.level === "store" ? "All branches" : (s.branch?.name ?? "Branch");
+    s.level === "platform" ? "Platform admin" : s.level === "store" ? "All branches" : (s.branches?.find((b) => String(b.id) === getBranchId())?.name ?? s.branch?.name ?? "Branch");
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[19rem_1fr] print:block">

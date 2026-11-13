@@ -527,8 +527,17 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Name" list="variation-names" value={v.base_unit_name} onChange={(e) => set("base_unit_name", e.target.value)} required
                 placeholder="Bottle, Can…" error={errors.base_unit_id?.[0] ?? errors.base_unit_name?.[0]}
-                hint={isNew ? "What stock is counted in." : "Can only be renamed to a different one while the product has no stock, sales or purchases."} />
+                hint={isNew ? "What stock is counted in." : "You can change this any time. Stock and past sales stay the same; they just show the new name."} />
               <Field label="Barcode" value={v.barcode} onChange={text("barcode")} />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="text-ink-soft">Quick pick:</span>
+              {["Bottle", "Plastic bottle", "Can", "Sachet", "Carton"].map((n) => (
+                <button key={n} type="button" onClick={() => set("base_unit_name", n)}
+                  className={`rounded-full border px-2.5 py-1 font-semibold transition ${v.base_unit_name.trim().toLowerCase() === n.toLowerCase() ? "border-[#f40009] bg-[#ffe9ea] text-[#f40009]" : "border-line bg-white hover:bg-paper"}`}>
+                  {n}
+                </button>
+              ))}
             </div>
           </div>
 

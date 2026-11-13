@@ -12,7 +12,7 @@ type Option = { value: string | number; label: string };
 export type FieldDef = {
   name: string;
   label: string;
-  type?: "text" | "email" | "password" | "select" | "checkbox" | "date" | "number";
+  type?: "text" | "email" | "password" | "select" | "checkbox" | "date" | "number" | "multicheck";
   required?: boolean; // marks the field required when creating
   createOnly?: boolean;
   editOnly?: boolean;
@@ -141,7 +141,7 @@ function RecordForm<T extends { id: number }>(
 
   const [values, setValues] = useState<Record<string, unknown>>(() => {
     const base: Record<string, unknown> = {};
-    for (const f of fields) base[f.name] = f.type === "checkbox" ? false : "";
+    for (const f of fields) base[f.name] = f.type === "checkbox" ? false : f.type === "multicheck" ? [] : "";
     return { ...base, ...(isNew ? p.initial : p.toForm ? p.toForm(p.row as T) : (p.row as object)) };
   });
   const [errors, setErrors] = useState<Record<string, string[]>>({});
@@ -224,6 +224,10 @@ function FormControl({ def, value, error, required, onChange }: {
     );
   }
 
+  if (def.type === "multicheck") {
+    return <RemoteChecks def={def} value={Array.isArray(value) ? (value as number[]) : []} error={error} onChange={onChange} />;
+  }
+
   if (def.type === "select") {
     return <RemoteSelect def={def} value={String(value ?? "")} error={error} required={required} onChange={onChange} />;
   }
@@ -239,6 +243,36 @@ function FormControl({ def, value, error, required, onChange }: {
       autoComplete={def.type === "password" ? "new-password" : "off"}
       onChange={(e) => onChange(e.target.value)}
     />
+  );
+}
+
+/** Tick several records (e.g. branches). The order they were ticked in is kept: the first is the main one. */
+function RemoteChecks({ def, value, error, onChange }: { def: FieldDef; value: number[]; error?: string; onChange: (v: number[]) => void }) {
+  const { data } = useQuery({
+    queryKey: ["options", def.optionsFrom?.endpoint],
+    enabled: !!def.optionsFrom,
+    queryFn: async () => (await api<Paginated<Record<string, unknown>> | { data: Record<string, unknown>[] }>(`${def.optionsFrom!.endpoint}?per_page=100`)).data,
+  });
+  const opts: Option[] = def.options ?? (data ?? []).map((r) => ({ value: r.id as number, label: String(r[def.optionsFrom?.label ?? "name"]) }));
+
+  return (
+    <fieldset>
+      <legend className="mb-1.5 block text-sm font-medium">{def.label}</legend>
+      <div className="grid gap-1.5 rounded-xl border border-line p-3 sm:grid-cols-2">
+        {opts.length === 0 && <p className="text-sm text-ink-soft">Nothing to choose yet.</p>}
+        {opts.map((o) => {
+          const id = Number(o.value);
+          const at = value.indexOf(id);
+          return (
+            <label key={id} className="flex items-center gap-2 text-sm">
+              <input type="checkbox" className="size-4 accent-[#f40009]" checked={at >= 0} onChange={() => onChange(at >= 0 ? value.filter((x) => x !== id) : [...value, id])} />
+              {o.label}{at === 0 && value.length > 1 && <span className="rounded bg-paper px-1.5 text-[11px] font-semibold text-ink-soft">Main</span>}
+            </label>
+          );
+        })}
+      </div>
+      {error ? <p className="mt-1 text-xs text-[#c23a3a]">{error}</p> : def.hint && <p className="mt-1 text-xs text-ink-soft">{def.hint}</p>}
+    </fieldset>
   );
 }
 
