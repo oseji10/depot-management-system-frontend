@@ -123,25 +123,26 @@ export function receiptPdf(r: ReceiptPdfInput, logo?: Logo | null): Blob {
   type Op = { t: "text"; s: string; x: number; y: number; size: number; bold: boolean; align: "l" | "r" | "c" } | { t: "rule"; y: number; dashed?: boolean };
   const ops: Op[] = [];
   let y = M2;
-  const cw = (size: number) => size * 0.5;
-  const wrap = (s: string, size: number, width: number) => {
-    const max = Math.max(8, Math.floor(width / cw(size)));
+  const wrap = (s: string, size: number, width: number, bold = false) => {
+    const fits = (t: string) => helvWidth(t, size, bold) <= width;
     const words = esc(s).split(/\s+/).filter(Boolean);
     const rows: string[] = [];
     let cur = "";
-    for (const w of words) {
-      if ((cur + " " + w).trim().length > max) { if (cur) rows.push(cur); cur = w.slice(0, max); } else cur = (cur + " " + w).trim();
+    for (let w of words) {
+      if (cur && !fits(`${cur} ${w}`)) { rows.push(cur); cur = ""; }
+      while (!fits(w) && w.length > 1) { let n = w.length - 1; while (n > 1 && !fits(w.slice(0, n))) n--; rows.push(w.slice(0, n)); w = w.slice(n); }
+      cur = cur ? `${cur} ${w}` : w;
     }
     if (cur) rows.push(cur);
     return rows.length ? rows : [""];
   };
   const put = (s: string, size: number, o: { bold?: boolean; align?: "l" | "r" | "c"; x?: number; width?: number; gap?: number } = {}) => {
-    const rows = wrap(s, size, o.width ?? inner);
+    const rows = wrap(s, size, o.width ?? inner, !!o.bold);
     for (const row of rows) { y += size; ops.push({ t: "text", s: row, x: o.x ?? M2, y, size, bold: !!o.bold, align: o.align ?? "l" }); y += (o.gap ?? 2.5); }
   };
   const pair = (a: string, b: string, size = 8.5, bold = false) => {
     const right = esc(b);
-    const left = wrap(a, size, inner - right.length * cw(size) - 8);
+    const left = wrap(a, size, inner - helvWidth(right, size, bold) - 8, bold);
     left.forEach((row, i) => {
       y += size;
       ops.push({ t: "text", s: row, x: M2, y, size, bold, align: "l" });
@@ -173,7 +174,7 @@ export function receiptPdf(r: ReceiptPdfInput, logo?: Logo | null): Blob {
 
   let c = "";
   const X = (op: Extract<Op, { t: "text" }>) => {
-    const tw = op.s.length * cw(op.size);
+    const tw = helvWidth(op.s, op.size, op.bold);
     return op.align === "r" ? W2 - M2 - tw : op.align === "c" ? (W2 - tw) / 2 : op.x;
   };
   if (logo) c += `q ${logoW.toFixed(1)} 0 0 ${logoH.toFixed(1)} ${((W2 - logoW) / 2).toFixed(1)} ${(H2 - logoY - logoH).toFixed(1)} cm /Im1 Do Q\n`;
@@ -201,4 +202,14 @@ export function receiptPdf(r: ReceiptPdfInput, logo?: Logo | null): Blob {
   pdf += `xref\n0 ${objs.length}\n0000000000 65535 f \n` + off.slice(1).map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("");
   pdf += `trailer\n<< /Size ${objs.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   return new Blob([Uint8Array.from(pdf, (ch) => ch.charCodeAt(0) & 255)], { type: "application/pdf" });
+}
+
+// Advance widths (1/1000 em) of Helvetica and Helvetica-Bold for characters 32..126, so centring and wrapping use the real text width.
+const HELV = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+const HELV_BOLD = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
+function helvWidth(s: string, size: number, bold: boolean): number {
+  const t = bold ? HELV_BOLD : HELV;
+  let w = 0;
+  for (const ch of s) { const c = ch.charCodeAt(0); w += (c >= 32 && c <= 126 ? t[c - 32] : 556); }
+  return (w * size) / 1000;
 }
