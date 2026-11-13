@@ -33,7 +33,7 @@ export default function TripsPage() {
         <thead className={theadClass}>
           <tr>
             <th scope="col" className={`${thClass} px-5`}>Trip</th>
-            <th scope="col" className={thClass}>Salesperson</th>
+            <th scope="col" className={thClass}>Van Salesman</th>
             <th scope="col" className={thClass}>Status</th>
             <th scope="col" className={`${thClass} text-right`}>Loaded</th>
             <th scope="col" className={`${thClass} text-right`}>Sales</th>
@@ -42,7 +42,7 @@ export default function TripsPage() {
         </thead>
         <tbody className="divide-y divide-line">
           {list.isLoading ? <TableLoading cols={6} /> : list.error ? <TableError cols={6} message={(list.error as Error).message} /> : list.data?.data.length === 0 ? (
-            <TableEmpty cols={6} title="No trips yet" hint="A trip starts the first time stock is issued to a salesperson." />
+            <TableEmpty cols={6} title="No trips yet" hint="A trip starts the first time stock is issued to a van salesman." />
           ) : list.data?.data.map((t) => (
             <tr key={t.id} className="transition hover:bg-[#fff5f5]">
               <td className="px-5 py-3.5"><Link href={`/field/trips/view?id=${t.id}`} className="font-semibold text-[#f40009] hover:underline">{t.number}</Link><p className="text-xs text-ink-soft">{formatDateTime(t.opened_at)}</p></td>

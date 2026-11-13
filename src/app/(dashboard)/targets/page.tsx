@@ -37,7 +37,7 @@ export default function TargetsPage() {
     <>
       <PageHeader
         title="Sales targets"
-        description="Set what each salesperson should sell in a month. Reaching the target earns a reward that goes on their payslip, separate from their salary."
+        description="Set what each van salesman should sell in a month. Reaching the target earns a reward that goes on their payslip, separate from their salary."
         action={manage && (
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => setModal("rules")}>Reward rules</Button>
@@ -53,7 +53,7 @@ export default function TargetsPage() {
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat label="Salespeople with targets" value={reps.length} icon={ICON.people} />
+        <Stat label="Van Salesmen with targets" value={reps.length} icon={ICON.people} />
         <Stat label="Rewards earned so far" value={formatKobo(totalReward)} tone="green" note={totalFull ? `of ${formatKobo(totalFull)} available` : undefined} />
         <Stat label="Goes on payroll for" value={monthLabel(rules?.pay_lag === 1 ? nextMonth(period) : period)} icon={ICON.cash} />
       </div>
@@ -135,7 +135,7 @@ function TargetModal({ rules, period, onClose, onDone }: { rules: TargetRules; p
     <Modal title={`Set a target for ${monthLabel(period)}`} onClose={onClose}>
       <form onSubmit={(e) => { e.preventDefault(); setErrors({}); save.mutate(); }} className="space-y-4">
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium">Salespeople</legend>
+          <legend className="mb-1.5 block text-sm font-medium">Van Salesmen</legend>
           <div className="flex flex-wrap gap-2">
             {list.map((r) => {
               const on = ids.includes(r.id);
@@ -198,7 +198,7 @@ function RulesModal({ rules, onClose, onDone }: { rules: TargetRules; onClose: (
   return (
     <Modal title="Reward rules" onClose={onClose}>
       <form onSubmit={(e) => { e.preventDefault(); setErr(null); save.mutate(); }} className="space-y-4">
-        <p className="text-sm text-ink-soft">Say how much of the reward is paid at each level of the target. Anyone below the lowest level gets nothing. These rules apply to every salesperson and product.</p>
+        <p className="text-sm text-ink-soft">Say how much of the reward is paid at each level of the target. Anyone below the lowest level gets nothing. These rules apply to every van salesman and product.</p>
         <div className="space-y-2">
           {tiers.map((t, i) => (
             <div key={i} className="flex items-center gap-2 text-sm">

@@ -93,7 +93,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
   const wide = pathname === "/pos"; // the till wants every pixel
   const offline = useOffline();
   const logo = useProductImage(s.store?.logo_url);
-  const isRep = !!s.van; // salespeople get a short menu: their van, the till, their sales and customers
+  const isRep = !!s.van; // van salesmen get a short menu: their van, the till, their sales and customers
 
   // Close the drawer with Escape
   useEffect(() => {
@@ -121,7 +121,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
     {
       title: "Van sales & fleet",
       items: [
-        { href: "/field", label: "Salespeople", icon: "van", show: s.can("trips.view") },
+        { href: "/field", label: "Van Salesmen", icon: "van", show: s.can("trips.view") },
         { href: "/field/trips", label: "Trips", icon: "route", show: s.can("trips.view") },
         { href: "/field/issues", label: "Sync issues", icon: "sync", show: s.can("trips.view") },
         { href: "/targets", label: "Sales targets", icon: "reports", show: !isRep && s.can("targets.view") },
@@ -223,7 +223,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
     const waiting = (offline?.pending ?? 0) + (offline?.rejected ?? 0);
     if (waiting > 0 && !window.confirm(`${waiting} sale${waiting === 1 ? "" : "s"} or expense${waiting === 1 ? "" : "s"} on this phone ${waiting === 1 ? "has" : "have"} not reached the depot yet. They stay safe on this phone, but you must sign in again and get a signal to send them. Sign out anyway?`)) return;
     // Pages saved for offline use belong to this sign-in; remove them.
-    // (Only salesperson phones register a service worker; awaiting `ready` anywhere else would never finish.)
+    // (Only van salesman phones register a service worker; awaiting `ready` anywhere else would never finish.)
     if (isRep) {
       try {
         const reg = await Promise.race([navigator.serviceWorker.ready, new Promise<undefined>((r) => setTimeout(r, 1500))]);

@@ -29,7 +29,7 @@ function describe(i: SyncIssue) {
   return { title: `New customer ${p.name ?? ""}`, detail: "" };
 }
 
-/** Things a salesperson's phone sent that the rules turned down. A manager fixes the cause and retries, or dismisses with a reason. */
+/** Things a van salesman's phone sent that the rules turned down. A manager fixes the cause and retries, or dismisses with a reason. */
 export default function SyncIssuesPage() {
   const s = useSession();
   const queryClient = useQueryClient();
@@ -56,7 +56,7 @@ export default function SyncIssuesPage() {
 
   return (
     <>
-      <PageHeader title="Sync issues" description="Sales and expenses a salesperson made without signal that could not be recorded. Their stock and cash stay out of the books until you deal with them."
+      <PageHeader title="Sync issues" description="Sales and expenses a van salesman made without signal that could not be recorded. Their stock and cash stay out of the books until you deal with them."
         action={s.can("trips.manage") && openCount > 0 && <Button busy={retryAll.isPending} onClick={() => retryAll.mutate()}>Retry all ({openCount})</Button>} />
       {retryAll.data && (
         <p className={`mb-4 rounded-xl px-4 py-3 text-sm ${retryAll.data.still_stuck ? "bg-amber-50 text-amber-900" : "bg-[#ffe9ea] text-[#a50006]"}`}>
@@ -73,7 +73,7 @@ export default function SyncIssuesPage() {
         <thead className={theadClass}>
           <tr>
             <th scope="col" className={`${thClass} px-5`}>What</th>
-            <th scope="col" className={thClass}>Salesperson</th>
+            <th scope="col" className={thClass}>Van Salesman</th>
             <th scope="col" className={thClass}>Why it was turned down</th>
             {s.can("trips.manage") && <th><span className="sr-only">Actions</span></th>}
           </tr>
@@ -124,7 +124,7 @@ function RetryModal({ issue, onClose, onDone }: { issue: SyncIssue; onClose: () 
     <Modal title="Retry this" onClose={onClose}>
       <div className="space-y-4">
         <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-[#a42e2e]">{stillNo ?? issue.error}</p>
-        <p className="text-sm text-ink-soft">Fix the cause first (receive more stock, raise the customer&apos;s credit limit, reopen a period), then retry. It is recorded as the salesperson, at the time they made it.</p>
+        <p className="text-sm text-ink-soft">Fix the cause first (receive more stock, raise the customer&apos;s credit limit, reopen a period), then retry. It is recorded as the van salesman, at the time they made it.</p>
         {issue.kind === "sale" && (
           <label className="flex items-start gap-2 text-sm font-medium"><input type="checkbox" checked={reprice} onChange={(e) => setReprice(e.target.checked)} className="mt-0.5 size-4" /> Charge today&apos;s list price instead of the price on the phone</label>
         )}

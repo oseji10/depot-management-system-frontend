@@ -5,7 +5,7 @@ import { Button } from "./ui";
 
 type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 
-/** Asks a salesperson to put the app on the phone's home screen. An installed app keeps its saved stock and opens with no signal. */
+/** Asks a van salesman to put the app on the phone's home screen. An installed app keeps its saved stock and opens with no signal. */
 export function InstallHint() {
   const [event, setEvent] = useState<InstallEvent | null>(null);
   const [ios, setIos] = useState(false);

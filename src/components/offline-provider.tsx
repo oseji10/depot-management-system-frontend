@@ -46,7 +46,7 @@ export type Offline = {
 
 const OfflineContext = createContext<Offline | null>(null);
 
-/** Null for managers; the salesperson's offline engine for anyone with a van. */
+/** Null for managers; the van salesman's offline engine for anyone with a van. */
 export const useOffline = () => useContext(OfflineContext);
 
 const uid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -76,7 +76,7 @@ async function call<T>(path: string, init: { method?: string; body?: unknown } =
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
   const s = useSession();
-  // Only salespeople work offline. Everyone else gets no engine, no service worker, no cached pages.
+  // Only van salesmen work offline. Everyone else gets no engine, no service worker, no cached pages.
   if (!s.van) return <>{children}</>;
   return <Engine userId={s.user.id}>{children}</Engine>;
 }

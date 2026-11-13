@@ -127,7 +127,7 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
       <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Full name" value={f.name} onChange={(e) => set("name")(e.target.value)} required autoFocus />
-          <SelectField label="Login account" value={f.user_id} onChange={set("user_id")} options={[{ value: "", label: "No login" }, ...users]} hint="Link a salesperson, driver or cashier so their pay and charges sit on one record." />
+          <SelectField label="Login account" value={f.user_id} onChange={set("user_id")} options={[{ value: "", label: "No login" }, ...users]} hint="Link a van salesman, driver or cashier so their pay and charges sit on one record." />
           <Field label="Job title" value={f.job_title} onChange={(e) => set("job_title")(e.target.value)} />
           <Field label="Department" value={f.department} onChange={(e) => set("department")(e.target.value)} />
           <Field label="Phone" value={f.phone} onChange={(e) => set("phone")(e.target.value)} />

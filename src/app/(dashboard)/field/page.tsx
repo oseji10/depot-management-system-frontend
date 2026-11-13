@@ -43,26 +43,26 @@ export default function FieldPage() {
   return (
     <>
       <PageHeader
-        title="Salespeople"
-        description="Issue stock to your drivers and salespeople, watch their sales as they happen, and check them in when they are back."
+        title="Van Salesmen"
+        description="Issue stock to your drivers and van salesmen, watch their sales as they happen, and check them in when they are back."
         action={manage && (
           <div className="flex flex-wrap gap-2">
-            {s.can("users.create") && <Button variant="secondary" onClick={() => setAdding(true)}><Svg d={ICON.plus} /> New salesperson</Button>}
+            {s.can("users.create") && <Button variant="secondary" onClick={() => setAdding(true)}><Svg d={ICON.plus} /> New van salesman</Button>}
             <Button onClick={() => setIssuing("any")} disabled={!list.some((r) => r.is_active)}><Svg d={ICON.box} /> Issue stock</Button>
           </div>
         )}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat label="On the road" value={reps.isLoading ? "…" : onRoad.length} icon={ICON.people} note={list.length ? `of ${list.length} salesperson${list.length === 1 ? "" : "s"}` : undefined} />
-        <Stat label="Sold today" value={reps.isLoading ? "…" : formatKobo(soldToday)} icon={ICON.trend} tone="blue" note="By all salespeople" />
+        <Stat label="On the road" value={reps.isLoading ? "…" : onRoad.length} icon={ICON.people} note={list.length ? `of ${list.length} van salesm${list.length === 1 ? "an" : "en"}` : undefined} />
+        <Stat label="Sold today" value={reps.isLoading ? "…" : formatKobo(soldToday)} icon={ICON.trend} tone="blue" note="By all van salesmen" />
         <Stat label="Stock out on vans" value={reps.isLoading ? "…" : unitsOut.toLocaleString("en-NG")} icon={ICON.box} tone="amber" note="Units still to sell or return" />
       </div>
 
       <TableCard min="46rem">
         <thead className={theadClass}>
           <tr>
-            <th scope="col" className={`${thClass} px-5`}>Salesperson</th>
+            <th scope="col" className={`${thClass} px-5`}>Van Salesman</th>
             <th scope="col" className={thClass}>Status</th>
             <th scope="col" className={`${thClass} text-right`}>On the van</th>
             <th scope="col" className={`${thClass} text-right`}>Sold today</th>
@@ -71,7 +71,7 @@ export default function FieldPage() {
         </thead>
         <tbody className="divide-y divide-line">
           {reps.isLoading ? <TableLoading cols={5} /> : reps.error ? <TableError cols={5} message={(reps.error as Error).message} /> : list.length === 0 ? (
-            <TableEmpty cols={5} icon={ICON.people} title="No salespeople yet" hint={manage ? "Add one to give them a login and a van." : "Ask a manager to add your salespeople."} />
+            <TableEmpty cols={5} icon={ICON.people} title="No van salesmen yet" hint={manage ? "Add one to give them a login and a van." : "Ask a manager to add your van salesmen."} />
           ) : list.map((r) => (
             <tr key={r.id} className="transition hover:bg-[#fff5f5]">
               <td className="px-5 py-3.5">

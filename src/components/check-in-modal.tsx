@@ -12,7 +12,7 @@ import { Button, ErrorNote, Modal, MoneyField, SelectField } from "./ui";
 const box = "min-h-10 w-full rounded-lg border border-line bg-surface px-2 text-right text-sm";
 
 /**
- * Welcome back. For every product still with the salesperson, count what came back in good condition and what is
+ * Welcome back. For every product still with the van salesman, count what came back in good condition and what is
  * damaged; anything not accounted for is written off as a shortage. Then record the cash handed over and close the trip.
  */
 export function CheckInModal({ report, onClose }: { report: TripReport; onClose: () => void }) {
@@ -29,7 +29,7 @@ export function CheckInModal({ report, onClose }: { report: TripReport; onClose:
   const [back, setBack] = useState(koboToInput(Math.max(0, imprest.balance)));
   const [note, setNote] = useState("");
   const [errors, setErrors] = useState<Record<string, string[]>>({});
-  const [unsent, setUnsent] = useState(false); // the salesperson's phone still holds sales; the manager must confirm to close anyway
+  const [unsent, setUnsent] = useState(false); // the van salesman's phone still holds sales; the manager must confirm to close anyway
   const [confirmed, setConfirmed] = useState(false);
   const waiting = report.sync.pending + report.sync.issues;
 

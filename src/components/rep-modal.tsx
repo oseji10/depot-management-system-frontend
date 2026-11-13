@@ -12,7 +12,7 @@ import { Button, ErrorNote, Field, Modal, SelectField } from "./ui";
 
 type Machine = { id: number; name: string; provider: string | null; branch_id: number | null; with_rep: boolean };
 
-/** Creates a salesperson (a login and a van of their own), or edits one: details, branch, routes and card terminal. */
+/** Creates a van salesman (a login and a van of their own), or edits one: details, branch, routes and card terminal. */
 export function RepModal({ rep, onClose }: { rep?: Rep; onClose: () => void }) {
   const s = useSession();
   const queryClient = useQueryClient();
@@ -28,7 +28,7 @@ export function RepModal({ rep, onClose }: { rep?: Rep; onClose: () => void }) {
 
   const branchId = form.branch_id || (branches.length === 1 ? String(branches[0].value) : "");
 
-  // Machines nobody else carries, plus this salesperson's own, for their branch.
+  // Machines nobody else carries, plus this van salesman's own, for their branch.
   const machines = useQuery({ queryKey: ["trip-terminals", rep?.id ?? 0], queryFn: () => api<{ data: Machine[] }>(`/trips/terminals${rep ? `?rep_id=${rep.id}` : ""}`) });
   const machineList = (machines.data?.data ?? []).filter((m) => !m.branch_id || !branchId || String(m.branch_id) === branchId);
 
@@ -49,7 +49,7 @@ export function RepModal({ rep, onClose }: { rep?: Rep; onClose: () => void }) {
   });
 
   return (
-    <Modal title={rep ? `Edit ${rep.name}` : "New salesperson"} onClose={onClose}>
+    <Modal title={rep ? `Edit ${rep.name}` : "New van salesman"} onClose={onClose}>
       <form onSubmit={(e) => { e.preventDefault(); setErrors({}); save.mutate(); }} className="space-y-4">
         {!rep && <p className="text-sm text-ink-soft">They get a login and their own van. They can only sell what you issue to them, and only see their own sales.</p>}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -79,13 +79,13 @@ export function RepModal({ rep, onClose }: { rep?: Rep; onClose: () => void }) {
           <div>
             {rep && (
               rep.can_delete
-                ? <DeleteButton path={`/reps/${rep.id}`} noun="salesperson" onDone={() => { queryClient.invalidateQueries({ queryKey: ["reps"] }); queryClient.invalidateQueries({ queryKey: ["trip-terminals"] }); onClose(); }} />
+                ? <DeleteButton path={`/reps/${rep.id}`} noun="van salesman" onDone={() => { queryClient.invalidateQueries({ queryKey: ["reps"] }); queryClient.invalidateQueries({ queryKey: ["trip-terminals"] }); onClose(); }} />
                 : <p className="max-w-56 text-xs text-ink-soft">Has sales or trip history, so they can&apos;t be deleted. Disable them instead.</p>
             )}
           </div>
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button type="submit" busy={save.isPending} disabled={!form.name || !form.email || (!rep && form.password.length < 8) || (!!form.password && form.password.length < 8) || !branchId}>{rep ? "Save changes" : "Create salesperson"}</Button>
+            <Button type="submit" busy={save.isPending} disabled={!form.name || !form.email || (!rep && form.password.length < 8) || (!!form.password && form.password.length < 8) || !branchId}>{rep ? "Save changes" : "Create van salesman"}</Button>
           </div>
         </div>
       </form>

@@ -14,7 +14,7 @@ export type Session = {
   branch: { id: number; name: string; code: string } | null;
   subscription?: SubscriptionState | null;
   level: Level;
-  /** Set for salespeople: the van they sell from. */
+  /** Set for van salesmen: the van they sell from. */
   van?: { id: number; name: string } | null;
   roles: string[];
   permissions: string[];
@@ -76,7 +76,7 @@ export type AppUser = {
   last_login_at: string | null;
 };
 
-export type Role = { id: number; name: string; is_template: boolean; permissions: string[] };
+export type Role = { id: number; name: string; is_template: boolean; is_owner?: boolean; permissions: string[] };
 
 export type AuditEntry = {
   id: number;
@@ -999,7 +999,7 @@ export type PlatformSubscriptions = {
 export type MyBusinesses = { current: number; data: { id: number; name: string; is_owner: boolean }[]; owned: number; allowed: number; can_create: boolean };
 export type WorkspaceOptions = { branches: { id: number; name: string }[]; warehouses: { id: number; name: string; branch_id: number }[] };
 
-/** One product target for one salesperson in a month, and how far they have got. */
+/** One product target for one van salesman in a month, and how far they have got. */
 export type TargetLine = {
   id: number; product_id: number | null; all_products: boolean; product: string; unit: string; quantity: number; target_base: number; achieved_base: number; achieved: number;
   percent: number; payout_percent: number; reward_full: number; reward: number;

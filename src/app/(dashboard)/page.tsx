@@ -29,14 +29,14 @@ function ManagerDashboard() {
   const actions = [
     { href: "/pos", label: "New sale", hint: "Open the till", icon: ICON.cart, show: s.can("sales.create") },
     { href: "/goods-receipts/new", label: "Receive goods", hint: "Record a delivery", icon: ICON.box, show: s.can("goods-receipts.record") },
-    { href: "/field", label: "Salespeople", hint: "Issue stock, watch trips", icon: ICON.people, show: s.can("trips.view") },
+    { href: "/field", label: "Van Salesmen", hint: "Issue stock, watch trips", icon: ICON.people, show: s.can("trips.view") },
     { href: "/customers", label: "Customers", hint: "Balances and credit", icon: ICON.people, show: s.can("customers.view") },
     { href: "/stock", label: "Stock on hand", hint: "See what is on the shelf", icon: ICON.doc, show: s.can("inventory.view") },
   ].filter((a) => a.show);
 
   const attention = [
     data?.sync_issues ? { href: "/field/issues", tone: "rose", text: `${data.sync_issues} sale${data.sync_issues === 1 ? "" : "s"} or expense${data.sync_issues === 1 ? "" : "s"} from the field could not be recorded` } : null,
-    data?.on_road ? { href: "/field", tone: "green", text: `${data.on_road} salesperson${data.on_road === 1 ? " is" : "s are"} on the road right now` } : null,
+    data?.on_road ? { href: "/field", tone: "green", text: `${data.on_road} van ${data.on_road === 1 ? "salesman is" : "salesmen are"} on the road right now` } : null,
     data?.low_stock ? { href: "/stock", tone: "amber", text: `${data.low_stock} product${data.low_stock === 1 ? " is" : "s are"} below the reorder level` } : null,
     sales?.unpaid_orders ? { href: "/sales", tone: "rose", text: `${sales.unpaid_orders} unpaid order${sales.unpaid_orders === 1 ? "" : "s"} · ${naira(sales.outstanding)} owed to you` } : null,
   ].filter((x): x is { href: string; tone: string; text: string } => !!x);

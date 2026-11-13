@@ -12,7 +12,7 @@ import { Button, ErrorNote, Field, Modal, MoneyField, SelectField } from "./ui";
 const uid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
 /**
- * Log money spent. A salesperson's expense is saved on the phone first (it works with no signal) and comes off the cash
+ * Log money spent. A van salesman's expense is saved on the phone first (it works with no signal) and comes off the cash
  * they hand in; everyone else records it straight to the books.
  */
 export function ExpenseModal({ onClose, onSaved }: { onClose: () => void; onSaved?: (note: string) => void }) {

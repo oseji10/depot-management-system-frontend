@@ -8,7 +8,7 @@ import { progressText } from "../lib/targets";
 import type { TargetRep } from "../lib/types";
 import { Card } from "./ui";
 
-/** A salesperson's own targets for the month and the reward they are on course for. Hidden when there are none (or with no signal). */
+/** A van salesman's own targets for the month and the reward they are on course for. Hidden when there are none (or with no signal). */
 export function MyTargets() {
   const period = new Date().toLocaleDateString("en-CA").slice(0, 7);
   const q = useQuery({ queryKey: ["targets", "mine", period], queryFn: () => api<TargetRep>(`/targets/mine?period=${period}`), retry: false, staleTime: 60_000 });

@@ -9,7 +9,7 @@ import { emptyLine, LinesEditor, type StockLine } from "./lines-editor";
 import { Button, ErrorNote, Field, Modal, SelectField } from "./ui";
 
 /**
- * Loads stock onto a salesperson's van. The first load opens their trip; later ones top it up.
+ * Loads stock onto a van salesman's van. The first load opens their trip; later ones top it up.
  * Quantities are entered the way the depot counts: crates, bottles, whatever the product is sold in.
  */
 export function IssueStockModal({ rep, reps, onClose, onIssued }: {
@@ -29,7 +29,7 @@ export function IssueStockModal({ rep, reps, onClose, onIssued }: {
   const [lines, setLines] = useState<StockLine[]>([emptyLine()]);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
 
-  // Card machines nobody else is carrying (or that this salesperson already has)
+  // Card machines nobody else is carrying (or that this van salesman already has)
   const machines = useQuery({ queryKey: ["trip-terminals", repId], enabled: !!repId, queryFn: () => api<{ data: { id: number; name: string; provider: string | null; with_rep: boolean; kept?: boolean }[] }>(`/trips/terminals?rep_id=${repId}`) });
   const machineList = machines.data?.data ?? [];
   const chosenTerminal = terminalId || String(machineList.find((m) => m.with_rep)?.id ?? "");
@@ -64,17 +64,17 @@ export function IssueStockModal({ rep, reps, onClose, onIssued }: {
   return (
     <Modal title="Issue stock" onClose={onClose} wide>
       <form onSubmit={(e) => { e.preventDefault(); setErrors({}); issue.mutate(); }} className="space-y-4">
-        <p className="text-sm text-ink-soft">The stock moves onto the salesperson’s van straight away. They can then sell it from their phone, and what is left comes back at check-in.</p>
+        <p className="text-sm text-ink-soft">The stock moves onto the van salesman’s van straight away. They can then sell it from their phone, and what is left comes back at check-in.</p>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <SelectField label="Salesperson" value={repId} onChange={setRepId} error={errors.rep_id?.[0]} required
+          <SelectField label="Van Salesman" value={repId} onChange={setRepId} error={errors.rep_id?.[0]} required
             options={[{ value: "", label: "Choose…" }, ...reps.map((r) => ({ value: r.id, label: r.name }))]} />
           <SelectField label="Take stock from" value={chosenFrom} onChange={setFrom} error={errors.from_warehouse_id?.[0]} required
             options={[{ value: "", label: "Choose…" }, ...warehouses]} />
           <SelectField label="Vehicle (optional)" value={vehicleId} onChange={setVehicleId} error={errors.vehicle_id?.[0]}
             options={[{ value: "", label: "Not recorded" }, ...vehicles]} />
           {machineList.some((m) => m.kept && m.with_rep) ? (
-            <p className="rounded-xl bg-paper px-3 py-2 text-sm"><span className="font-medium">POS terminal:</span> {machineList.find((m) => m.kept && m.with_rep)?.name} <span className="text-ink-soft">· assigned to this salesperson, goes out with this load</span></p>
+            <p className="rounded-xl bg-paper px-3 py-2 text-sm"><span className="font-medium">POS terminal:</span> {machineList.find((m) => m.kept && m.with_rep)?.name} <span className="text-ink-soft">· assigned to this van salesman, goes out with this load</span></p>
           ) : machineList.length > 0 && (
             <SelectField label="POS terminal (optional)" value={chosenTerminal} onChange={setTerminalId} error={errors.pos_terminal_id?.[0]}
               hint="The machine they carry. Their card payments and POS transfers are tied to it until the trip is checked in."

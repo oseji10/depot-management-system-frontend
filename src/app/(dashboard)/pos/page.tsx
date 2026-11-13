@@ -38,7 +38,7 @@ function stockText(p: PosProduct) {
 
 export default function PosPage() {
   const s = useSession();
-  // Salespeople use the offline-first till; it is a different screen with the same look.
+  // Van Salesmen use the offline-first till; it is a different screen with the same look.
   if (s.van) return <FieldPos />;
   return <CounterPos />;
 }
@@ -67,7 +67,7 @@ function CounterPos() {
   const [done, setDone] = useState<{ sale: Sale; change: number } | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
 
-  // Salespeople sell from their own van only; everyone else picks a warehouse.
+  // Van Salesmen sell from their own van only; everyone else picks a warehouse.
   const warehouses = useQuery({ queryKey: ["pos", "warehouses"], enabled: !s.van, queryFn: () => api<Paginated<Warehouse>>("/warehouses?per_page=100") });
   const myVan = useQuery({ queryKey: ["field", "me"], enabled: !!s.van, queryFn: () => api<MyVan>("/field/me"), refetchInterval: 30_000 });
   const noLoad = !!s.van && !myVan.isLoading && !myVan.data?.report;

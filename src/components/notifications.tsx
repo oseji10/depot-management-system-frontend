@@ -40,7 +40,7 @@ function Glyph({ n, className = "size-5" }: { n: AppNotification; className?: st
   );
 }
 
-/** Head-office users only: salespeople and branch users have no depot-wide notifications. */
+/** Head-office users only: van salesmen and branch users have no depot-wide notifications. */
 function useFeed() {
   const s = useSession();
   const enabled = !s.van && s.level !== "branch";

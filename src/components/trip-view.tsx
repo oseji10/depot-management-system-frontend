@@ -11,7 +11,7 @@ import { DispatchNote } from "./dispatch-note";
 import { ImprestModal } from "./imprest-modal";
 import { Badge, Button, Card, ICON, Stat, TableCard, theadClass, thClass } from "./ui";
 
-/** The figures, stock table, sales feed and load history for one trip. Shared by the manager's page and the salesperson's home. */
+/** The figures, stock table, sales feed and load history for one trip. Shared by the manager's page and the van salesman's home. */
 export function TripView({ report, mine = false }: { report: TripReport; mine?: boolean }) {
   const { money: m, totals: t } = report;
   const s = useSession();

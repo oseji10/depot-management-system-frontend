@@ -7,7 +7,7 @@ import type { Rep } from "../lib/types";
 import { RoutePicker } from "./route-picker";
 import { Button, ErrorNote, Modal } from "./ui";
 
-/** Change which routes a salesperson covers. */
+/** Change which routes a van salesman covers. */
 export function RoutesModal({ rep, onClose }: { rep: Rep; onClose: () => void }) {
   const qc = useQueryClient();
   const [ids, setIds] = useState<number[]>((rep.routes ?? []).map((r) => r.id));

@@ -36,7 +36,7 @@ function stockText(p: PosProduct, stock: number) {
 }
 
 /**
- * The salesperson's till. It sells from what the phone already holds (stock on the van, prices, customers) and saves each
+ * The van salesman's till. It sells from what the phone already holds (stock on the van, prices, customers) and saves each
  * sale on the phone first. Sending to the depot happens in the background, now or whenever there is signal.
  */
 export function FieldPos() {

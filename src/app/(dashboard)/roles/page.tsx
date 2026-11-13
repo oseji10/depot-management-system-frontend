@@ -48,7 +48,7 @@ export default function RolesPage() {
                 </td>
                 <td className="px-4 py-3 text-ink-soft">{r.permissions.length} permissions</td>
                 <td className="px-4 py-3 text-right">
-                  {s.can("roles.manage") && r.name !== "Owner" && (
+                  {s.can("roles.manage") && (
                     <button onClick={() => setEditing(r)} className="font-semibold text-[#f40009] hover:underline">
                       Edit
                     </button>
@@ -117,13 +117,14 @@ function RoleForm({ role, onClose }: { role: Role | null; onClose: () => void })
           label="Role name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          disabled={role?.is_template}
-          hint={role?.is_template ? "Standard roles keep their name." : undefined}
+          hint={role?.is_template ? "You can rename this role to whatever your business calls it. Nothing else changes." : undefined}
           error={fieldErrors.name?.[0]}
           required
         />
 
-        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-paper px-3 py-2 text-sm">
+        {role?.is_owner && <p className="rounded-xl bg-paper px-3 py-2 text-sm text-ink-soft">The owner always has every permission, including new ones added later. Only the name can be changed.</p>}
+
+        {!role?.is_owner && <div className="flex flex-wrap items-center gap-2 rounded-xl bg-paper px-3 py-2 text-sm">
           <span className="font-medium">Quick select:</span>
           <button type="button" onClick={() => pickMany(allPerms.filter((p) => p.endsWith(".view") || MENU_EXTRAS.includes(p)))} className="font-semibold text-[#f40009] hover:underline">Every menu</button>
           <span className="text-ink-soft">·</span>
@@ -131,9 +132,9 @@ function RoleForm({ role, onClose }: { role: Role | null; onClose: () => void })
           <span className="text-ink-soft">·</span>
           <button type="button" onClick={() => setSelected(new Set())} className="font-semibold text-[#f40009] hover:underline">Clear</button>
           <p className="w-full text-xs text-ink-soft">&ldquo;Every menu&rdquo; ticks every view permission plus the ones a few menus need (Point of sale needs sales.create, My business and Subscription need business.manage). You can only tick what you hold yourself.</p>
-        </div>
+        </div>}
 
-        <div className="space-y-4">
+        {!role?.is_owner && <div className="space-y-4">
           {Object.entries(catalogue.data?.data ?? {}).map(([group, perms]) => (
             <fieldset key={group} className="rounded-xl border border-line p-3">
               <legend className="px-1 text-sm font-semibold">
@@ -161,7 +162,7 @@ function RoleForm({ role, onClose }: { role: Role | null; onClose: () => void })
               </div>
             </fieldset>
           ))}
-        </div>
+        </div>}
 
         {(error || fieldErrors.permissions) && (
           <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm text-[#c23a3a]">
@@ -170,7 +171,7 @@ function RoleForm({ role, onClose }: { role: Role | null; onClose: () => void })
         )}
 
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>{role && <DeleteButton path={`/roles/${role.id}`} noun="role" onDone={() => { window.location.reload(); }} />}</div>
+          <div>{role && !role.is_template && <DeleteButton path={`/roles/${role.id}`} noun="role" onDone={() => { window.location.reload(); }} />}</div>
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
             <Button type="submit" busy={save.isPending}>{role ? "Save changes" : "Add role"}</Button>

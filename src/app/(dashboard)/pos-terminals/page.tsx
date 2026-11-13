@@ -118,7 +118,7 @@ function TerminalModal({ terminal, onClose, onSaved }: { terminal: PosTerminal |
           <Field label="Serial number (optional)" value={v.serial_number} onChange={text("serial_number")} error={errors.serial_number?.[0]} />
           <SelectField label="Branch" value={v.branch_id} onChange={(x) => setV((s) => ({ ...s, branch_id: x }))} options={[{ value: "", label: "Any branch" }, ...branches]} error={errors.branch_id?.[0]} />
           <SelectField label="Carried by (optional)" value={v.assigned_user_id} onChange={(x) => setV((s) => ({ ...s, assigned_user_id: x }))} options={[{ value: "", label: "Shared" }, ...users]}
-            hint="A salesperson who takes it on the road. Others cannot use it." error={errors.assigned_user_id?.[0]} />
+            hint="A van salesman who takes it on the road. Others cannot use it." error={errors.assigned_user_id?.[0]} />
         </div>
         <SelectField label="Settles into" value={v.account_id} onChange={(x) => setV((s) => ({ ...s, account_id: x }))}
           options={[{ value: "", label: "Main Bank account" }, ...bankAccounts.map((a) => ({ value: a.id, label: a.bank_name ? `${a.name} · ${a.bank_name}` : a.name }))]}

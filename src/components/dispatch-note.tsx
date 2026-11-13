@@ -38,7 +38,7 @@ export function DispatchNote({ report, load, onClose }: { report: TripReport; lo
         </header>
 
         <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1">
-          <div className="flex justify-between"><dt className="text-ink-soft">Driver / salesperson</dt><dd className="font-semibold">{report.rep.name}</dd></div>
+          <div className="flex justify-between"><dt className="text-ink-soft">Driver / van salesman</dt><dd className="font-semibold">{report.rep.name}</dd></div>
           <div className="flex justify-between"><dt className="text-ink-soft">Van</dt><dd className="font-semibold">{report.van.name}</dd></div>
           {report.vehicle && <div className="flex justify-between"><dt className="text-ink-soft">Vehicle</dt><dd className="font-semibold">{report.vehicle.nickname || report.vehicle.reg_no}</dd></div>}
           {report.terminal && <div className="flex justify-between"><dt className="text-ink-soft">POS terminal</dt><dd className="font-semibold">{report.terminal.name}</dd></div>}

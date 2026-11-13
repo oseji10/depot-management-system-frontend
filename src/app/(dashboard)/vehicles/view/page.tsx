@@ -111,7 +111,7 @@ function VehiclePage() {
 
         <div className="grid gap-4 lg:grid-cols-2">
           <Card title="Recent trips">
-            {v.trips.length === 0 ? <p className="text-sm text-ink-soft">No trips yet. Pick this vehicle when you issue stock to a salesperson.</p> : (
+            {v.trips.length === 0 ? <p className="text-sm text-ink-soft">No trips yet. Pick this vehicle when you issue stock to a van salesman.</p> : (
               <ul className="divide-y divide-line text-sm">
                 {v.trips.map((t) => (
                   <li key={t.id} className="flex items-center justify-between py-2">

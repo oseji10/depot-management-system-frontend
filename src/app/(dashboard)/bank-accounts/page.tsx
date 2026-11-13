@@ -20,7 +20,7 @@ export default function BankAccountsPage() {
     <>
       <PageHeader
         title="Bank accounts"
-        description="The accounts your customers pay into. Cashiers and salespeople pick one whenever a sale is paid by bank transfer, and the money is recorded against it."
+        description="The accounts your customers pay into. Cashiers and van salesmen pick one whenever a sale is paid by bank transfer, and the money is recorded against it."
         action={canManage && <Button onClick={() => setEditing("new")}><Svg d={ICON.plus} /> Add bank account</Button>}
       />
 

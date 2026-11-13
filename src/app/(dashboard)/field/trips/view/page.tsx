@@ -19,7 +19,7 @@ function TripDetailPage() {
   const s = useSession();
   const [dialog, setDialog] = useState<"issue" | "checkin" | null>(null);
 
-  // While the trip is open the page keeps itself fresh, so sales show up as the salesperson makes them.
+  // While the trip is open the page keeps itself fresh, so sales show up as the van salesman makes them.
   const doc = useQuery({
     queryKey: ["trip", id], queryFn: () => api<TripReport>(`/trips/${id}`),
     refetchInterval: (q) => (q.state.data?.trip.status === "open" ? 15_000 : false),

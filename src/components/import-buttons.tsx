@@ -42,13 +42,13 @@ export function ImportProductsButton() {
       {open && (
         <ImportModal
           title="Upload products" endpoint="/imports/products" onClose={() => setOpen(false)}
-          extra={category && unit ? { category_id: Number(category), base_unit_id: Number(unit), warehouse_id: warehouse ? Number(warehouse) : null } : null}
-          intro={<p>Upload your product export (Excel). Each new product gets the category and unit below and its price in your standard price list. Products you already have (same code or same name) are skipped. Stock counts are <strong>not</strong> added directly: they become one opening-stock adjustment waiting for approval.</p>}
-          columns={[{ name: "Product ID" }, { name: "Name", required: true }, { name: "Price" }, { name: "Cost" }, { name: "Stock Qty" }]}
+          extra={category ? { category_id: Number(category), base_unit_id: unit ? Number(unit) : null, warehouse_id: warehouse ? Number(warehouse) : null } : null}
+          intro={<p>Upload your product export (Excel). Each new product gets the category below and its price in your standard price list. What it is counted in comes from a "Unit" column if your file has one, otherwise from the name (RGB = Bottle, PET = Plastic bottle, CAN = Can). Products you already have (same code or same name) are skipped. Stock counts are <strong>not</strong> added directly: they become one opening-stock adjustment waiting for approval.</p>}
+          columns={[{ name: "Product ID" }, { name: "Name", required: true }, { name: "Price" }, { name: "Cost" }, { name: "Stock Qty" }, { name: "Unit" }]}
           options={
             <div className="grid gap-3 sm:grid-cols-3">
               <SelectField label="Category for new products" value={category} onChange={setCategory} options={[{ value: "", label: "Choose…" }, ...categories]} hint="Move them to the right category afterwards." />
-              <SelectField label="Counted in (base unit)" value={unit} onChange={setUnit} options={[{ value: "", label: "Choose…" }, ...units]} hint="Usually Bottle or Can." />
+              <SelectField label="Counted in, when it is not clear" value={unit} onChange={setUnit} options={[{ value: "", label: "Bottle" }, ...units]} hint="Used only for products whose name does not say bottle, plastic bottle or can, and that have no Unit column." />
               <SelectField label="Opening stock goes to" value={warehouse} onChange={setWarehouse} options={[{ value: "", label: "Don't add stock" }, ...warehouses]} />
             </div>
           }

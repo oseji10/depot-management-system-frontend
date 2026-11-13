@@ -61,7 +61,7 @@ const PRESETS = [
   { id: "custom", label: "Custom", range: () => [addDays(new Date(), -29), new Date()] },
 ] as const;
 
-const CHANNELS: Record<string, string> = { counter: "Counter", phone: "Phone order", delivery: "Delivery", field: "Salesperson (van)", van: "Salesperson (van)", pos: "POS" };
+const CHANNELS: Record<string, string> = { counter: "Counter", phone: "Phone order", delivery: "Delivery", field: "Van Salesman", van: "Van Salesman", pos: "POS" };
 const METHODS: Record<string, string> = { cash: "Cash", transfer: "Bank transfer", pos: "Card / POS", credit: "On account" };
 const STATUS: Record<string, string> = { paid: "Fully paid", partial: "Part paid", unpaid: "Not paid (credit)" };
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

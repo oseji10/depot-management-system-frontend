@@ -16,8 +16,8 @@ export default function AccessPage() {
     if (r.platformOnly && !s.isPlatform) why = "Only for the platform super admin.";
     else if (r.notPlatform && s.isPlatform) why = "Only for a business's own users.";
     else if (off.has(r.href)) why = "Switched off for your business (Stores → Menus, by the platform admin).";
-    else if (isRep && (r.notRep || !["/", "/pos", "/sales", "/customers", "/expenses"].includes(r.href))) why = `This account is a salesperson (it has a van), and salespeople only get a short menu.`;
-    else if (r.repOnly && !isRep) why = "Only shown to salespeople.";
+    else if (isRep && (r.notRep || !["/", "/pos", "/sales", "/customers", "/expenses"].includes(r.href))) why = `This account is a van salesman (it has a van), and van salesmen only get a short menu.`;
+    else if (r.repOnly && !isRep) why = "Only shown to van salesmen.";
     else if (r.perm && !s.can(r.perm)) why = `Your role is missing the permission “${r.perm}”.`;
     return { ...r, why };
   });

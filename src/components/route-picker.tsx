@@ -5,7 +5,7 @@ import { api } from "../lib/api";
 
 type Group = { id: number; name: string; kind: string };
 
-/** Tick the routes a salesperson covers. Routes are the customer groups of kind "route" (Customers → Groups). */
+/** Tick the routes a van salesman covers. Routes are the customer groups of kind "route" (Customers → Groups). */
 export function RoutePicker({ value, onChange }: { value: number[]; onChange: (ids: number[]) => void }) {
   const q = useQuery({ queryKey: ["customer-groups", "routes"], queryFn: () => api<{ data: Group[] }>("/customer-groups") });
   const routes = (q.data?.data ?? []).filter((g) => g.kind === "route");

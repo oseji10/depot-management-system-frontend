@@ -77,6 +77,21 @@ export default function ProductsPage() {
   });
 
   const canManage = s.can("products.manage");
+  const [picked, setPicked] = useState<number[]>([]);
+  const [unitName, setUnitName] = useState("");
+  const [unitMsg, setUnitMsg] = useState<string | null>(null);
+  const unitOptions = useOptions("/units");
+  const pageIds = data?.data.map((p) => p.id) ?? [];
+  const allPicked = pageIds.length > 0 && pageIds.every((id) => picked.includes(id));
+  const bulkUnit = useMutation({
+    mutationFn: () => api<{ changed: number; skipped: { name: string; reason: string }[] }>("/products/bulk-unit", { method: "POST", body: { product_ids: picked, base_unit_name: unitName.trim() } }),
+    onSuccess: (r) => {
+      setUnitMsg(`${r.changed} product${r.changed === 1 ? "" : "s"} now counted in ${unitName.trim()}.${r.skipped.length ? ` ${r.skipped.length} skipped: ${r.skipped.map((x) => x.name).join(", ")}.` : ""}`);
+      setPicked([]); setUnitName("");
+      void queryClient.invalidateQueries({ queryKey: ["list", "/products"] });
+    },
+    onError: (e: Error) => setUnitMsg(e.message),
+  });
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const remove = useMutation({
     mutationFn: (id: number) => api(`/products/${id}`, { method: "DELETE" }),
@@ -142,11 +157,29 @@ export default function ProductsPage() {
         {data && <span className="ml-auto pr-1 text-sm text-ink-soft">{data.total} product{data.total === 1 ? "" : "s"}</span>}
       </div>
 
+      {canManage && (picked.length > 0 || unitMsg) && (
+        <div className="mb-3 flex flex-wrap items-center gap-2.5 rounded-2xl border border-line bg-[#fff5f5] p-3 text-sm shadow-sm">
+          {picked.length > 0 ? (
+            <>
+              <strong>{picked.length} selected.</strong>
+              <label className="flex flex-wrap items-center gap-2">Count them in
+                <input list="bulk-unit-names" value={unitName} onChange={(e) => setUnitName(e.target.value)} placeholder="Bottle, Plastic bottle, Can…" className={`${filterClass} w-56`} />
+              </label>
+              <datalist id="bulk-unit-names">{unitOptions.map((u) => <option key={u.value} value={u.label} />)}</datalist>
+              <Button busy={bulkUnit.isPending} disabled={!unitName.trim()} onClick={() => { setUnitMsg(null); bulkUnit.mutate(); }}>Apply</Button>
+              <button type="button" onClick={() => setPicked([])} className="font-semibold text-ink-soft hover:underline">Clear selection</button>
+            </>
+          ) : null}
+          {unitMsg && <span className="text-ink-soft">{unitMsg}</span>}
+        </div>
+      )}
+
       {/* Table */}
       <div className="relative overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
         <table className="w-full min-w-[52rem] text-left text-sm">
           <thead className="border-b border-line bg-[#fff5f5] text-[11px] tracking-wider text-ink-soft uppercase">
             <tr>
+              {canManage && <th scope="col" className="w-10 py-3.5 pl-4"><input type="checkbox" aria-label="Select all products on this page" checked={allPicked} onChange={() => setPicked(allPicked ? picked.filter((id) => !pageIds.includes(id)) : [...new Set([...picked, ...pageIds])])} /></th>}
               <th scope="col" className="px-5 py-3.5 font-semibold">Product</th>
               <th scope="col" className="px-4 py-3.5 font-semibold">Category</th>
               <th scope="col" className="px-4 py-3.5 font-semibold">Rebate category</th>
@@ -177,12 +210,12 @@ export default function ProductsPage() {
               ))}
 
             {error && (
-              <tr><td colSpan={7} className={`px-4 py-10 text-center ${ERR}`}>{(error as Error).message}</td></tr>
+              <tr><td colSpan={8} className={`px-4 py-10 text-center ${ERR}`}>{(error as Error).message}</td></tr>
             )}
 
             {data?.data.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-16 text-center">
+                <td colSpan={8} className="px-4 py-16 text-center">
                   <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#ffe9ea] text-[#f40009]">
                     <Svg d={I.box} className="size-7" />
                   </span>
@@ -196,6 +229,7 @@ export default function ProductsPage() {
 
             {data?.data.map((p) => (
               <tr key={p.id} className="group transition-colors hover:bg-[#fff5f5]">
+                {canManage && <td className="w-10 pl-4"><input type="checkbox" aria-label={`Select ${p.name}`} checked={picked.includes(p.id)} onChange={() => setPicked(picked.includes(p.id) ? picked.filter((id) => id !== p.id) : [...picked, p.id])} /></td>}
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-3">
                     <ProductThumb url={p.image_url} name={p.name} fallbackClass={PACKAGING_STYLE[p.packaging] ?? PACKAGING_STYLE.other} />

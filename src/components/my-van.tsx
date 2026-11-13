@@ -18,7 +18,7 @@ const greeting = () => {
   return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 };
 
-/** A salesperson's home: what is on their van, what they have sold, and the cash they are holding. */
+/** A van salesman's home: what is on their van, what they have sold, and the cash they are holding. */
 export function MyVanHome() {
   const s = useSession();
   const me = useQuery({ queryKey: ["field", "me"], queryFn: () => api<MyVan>("/field/me"), refetchInterval: 20_000 });
