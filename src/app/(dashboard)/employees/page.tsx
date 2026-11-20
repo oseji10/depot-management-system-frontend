@@ -47,7 +47,7 @@ export default function EmployeesPage() {
               : (list.data?.data.length ?? 0) === 0 ? <TableEmpty cols={5} title="No employees" hint="Add your staff so they can be paid and charged for damages." />
               : list.data!.data.map((e) => (
                 <tr key={e.id}>
-                  <td className="px-4 py-3"><p className="font-medium">{e.name} {e.user && <Badge tone="good">Has login</Badge>} {e.status === "left" && <Badge>Left</Badge>}{e.status === "archived" && <Badge>Archived</Badge>}</p><p className="text-xs text-ink-soft">{e.staff_no}{e.phone ? ` · ${e.phone}` : ""}</p></td>
+                  <td className="px-4 py-3"><p className="font-medium">{e.name} {e.user && <Badge tone="good">Has login</Badge>} {e.status === "left" && <Badge>Left</Badge>}{e.status === "archived" && <Badge>Archived</Badge>}</p><p className="text-xs text-ink-soft">{e.staff_no}{e.phone ? ` · ${e.phone}` : ""}{e.user?.email ? ` · ${e.user.email}` : ""}</p></td>
                   <td className="px-4 py-3">{(e.branches?.length ? e.branches.map((b) => b.name) : [e.branch?.name ?? "–"]).join(", ")}</td>
                   <td className="px-4 py-3">{[e.job_title, e.department].filter(Boolean).join(" · ") || "–"}</td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">{formatKobo(e.basic_salary)}</td>
@@ -80,7 +80,26 @@ function ArchiveButton({ employee }: { employee: Employee }) {
 
 type ItemState = Record<number, { on: boolean; value: string }>;
 
+/** Emails the linked login a link to set a new password (same as on the Users page). */
+function SendResetButton({ userId, email }: { userId: number; email: string }) {
+  const send = useMutation({ mutationFn: () => api<{ message: string }>(`/users/${userId}/send-reset`, { method: "POST" }) });
+
+  return (
+    <div>
+      <Button type="button" size="sm" variant="secondary" busy={send.isPending}
+        onClick={() => { if (window.confirm(`Email ${email} a link to set a new password?`)) send.mutate(); }}>
+        Send reset email
+      </Button>
+      {send.isSuccess && <p className="mt-1 text-xs text-emerald-700">Reset email sent to {email}.</p>}
+      {send.error && <p className="mt-1 text-xs text-[#c23a3a]">{(send.error as Error).message}</p>}
+    </div>
+  );
+}
+
 function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClose: () => void }) {
+  const session = useSession();
+  const [loginEmail, setLoginEmail] = useState(employee?.user?.email ?? "");
+  const [loginPassword, setLoginPassword] = useState("");
   const qc = useQueryClient();
   const branches = useOptions("/branches");
   const users = useOptions("/users");
@@ -105,6 +124,9 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
     value: p.value === null ? "" : String(p.value / 100),
   }]));
 
+  // Login details can be changed here when the employee keeps the login they already had.
+  const showLogin = !!employee?.user && String(employee.user_id ?? "") === f.user_id && session.can("users.update");
+
   const save = useMutation({
     mutationFn: () => {
       const pay_items = Object.entries(state).filter(([, v]) => v.on).map(([id, v]) => {
@@ -114,6 +136,8 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
         user_id: f.user_id ? Number(f.user_id) : null, name: f.name, branch_id: branchIds[0] ?? null, branch_ids: branchIds, phone: f.phone || null, job_title: f.job_title || null, department: f.department || null,
         hired_on: f.hired_on || null, basic_salary: nairaToKobo(f.basic), overtime_rate: f.overtime ? nairaToKobo(f.overtime) : null, bank_name: f.bank_name || null, account_number: f.account_number || null,
         account_name: f.account_name || null, status: f.status, pay_items,
+        ...(showLogin && loginEmail.trim() && loginEmail.trim().toLowerCase() !== (employee?.user?.email ?? "").toLowerCase() ? { login_email: loginEmail.trim() } : {}),
+        ...(showLogin && loginPassword ? { login_password: loginPassword } : {}),
       };
       return api(employee ? `/employees/${employee.id}` : "/employees", { method: employee ? "PUT" : "POST", body });
     },
@@ -136,6 +160,21 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
           <MoneyField label="Overtime rate per hour (optional)" value={f.overtime} onChange={set("overtime")} hint="Used when you record overtime for this person. Leave empty to type the rate each time." />
           {employee && <SelectField label="Status" value={f.status} onChange={set("status")} options={[{ value: "active", label: "Current staff" }, { value: "left", label: "Left the business" }]} />}
         </div>
+
+        {showLogin && employee?.user && (
+          <fieldset className="rounded-xl border border-line p-3">
+            <legend className="px-1 text-sm font-semibold">Login</legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Login email" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required hint="What they sign in with." />
+              <Field label="New password (optional)" type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} autoComplete="new-password"
+                hint="At least 8 characters. Leave empty to keep their current password." />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+              <SendResetButton userId={employee.user.id} email={employee.user.email} />
+              <span className="text-xs text-ink-soft">Or email them a link to choose their own password.</span>
+            </div>
+          </fieldset>
+        )}
 
         <fieldset className="rounded-xl border border-line p-3">
           <legend className="px-1 text-sm font-semibold">Branches</legend>
