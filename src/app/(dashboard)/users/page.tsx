@@ -37,7 +37,7 @@ export default function UsersPage() {
       canEdit={s.can("users.update")}
       initial={{ is_active: true }}
       toForm={(u) => ({
-        name: u.name, phone: u.phone ?? "", password: "", is_active: u.is_active,
+        name: u.name, email: u.email, phone: u.phone ?? "", password: "", is_active: u.is_active,
         role_id: u.role?.id ?? "",
         branch_ids: [...new Set([...(u.branch_id ? [u.branch_id] : []), ...(u.branches ?? []).map((b) => b.id)])],
       })}
@@ -64,7 +64,7 @@ export default function UsersPage() {
       ]}
       fields={[
         { name: "name", label: "Full name", required: true },
-        { name: "email", label: "Email", type: "email", required: true, createOnly: true },
+        { name: "email", label: "Email", type: "email", required: true, hint: "What they sign in with." },
         { name: "phone", label: "Phone" },
         { name: "password", label: "Password", type: "password", required: true, hint: "At least 8 characters. Leave blank when editing to keep the current one." },
         { name: "role_id", label: "Role", type: "select", required: true,

@@ -189,11 +189,19 @@ export const StatusBadge = ({ active }: { active: boolean }) => (
   </span>
 );
 
+// Open modals, newest last, so Escape closes only the one on top (a modal can open another).
+const openModals: object[] = [];
+
 export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const me = {};
+    openModals.push(me);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && openModals[openModals.length - 1] === me && onClose();
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      openModals.splice(openModals.indexOf(me), 1);
+    };
   }, [onClose]);
 
   return (

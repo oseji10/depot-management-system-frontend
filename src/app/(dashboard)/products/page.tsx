@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { VariationPicker } from "../../../components/variation-picker";
+import { BundleBox, ProductTypeCards, VariationsBox, type BundleRow, type ProductKind, type VariationRow } from "../../../components/product-variations";
 import Link from "next/link";
 import { useDeferredValue, useState } from "react";
 import { ImportProductsButton } from "../../../components/import-buttons";
@@ -258,6 +258,14 @@ export default function ProductsPage() {
                   )}
                 </td>
                 <td className="px-4 py-3.5">
+                  {p.is_bundle ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="rounded-lg bg-[#f40009] px-2 py-1 text-xs font-semibold text-white">Bundle</span>
+                      {(p.bundle_items ?? []).map((b) => (
+                        <span key={b.id} className="rounded-lg bg-paper px-2 py-1 text-xs font-medium text-ink ring-1 ring-line">{b.quantity} {b.unit?.name} {b.product?.name}</span>
+                      ))}
+                    </div>
+                  ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {[...p.units]
                       .filter((u) => u.is_active)
@@ -271,10 +279,11 @@ export default function ProductsPage() {
                         </span>
                       ))}
                   </div>
+                  )}
                 </td>
                 <td className="px-4 py-3.5 text-right">
-                  <p className={`font-semibold tabular-nums ${(p.stock_units ?? 0) <= 0 ? "text-[#c23a3a]" : ""}`}>{(p.stock_units ?? 0).toLocaleString("en-NG")}</p>
-                  {(p.stock_units ?? 0) > 0 && p.units.filter((u) => u.is_active && !u.is_base).length > 0 && (
+                  {p.is_bundle ? <p className="text-xs text-ink-soft">Uses its products&apos; stock</p> : <p className={`font-semibold tabular-nums ${(p.stock_units ?? 0) <= 0 ? "text-[#c23a3a]" : ""}`}>{(p.stock_units ?? 0).toLocaleString("en-NG")}</p>}
+                  {!p.is_bundle && (p.stock_units ?? 0) > 0 && p.units.filter((u) => u.is_active && !u.is_base).length > 0 && (
                     <p className="text-xs text-ink-soft">{formatQty(p.stock_units ?? 0, p.base_unit?.name ?? null, null, p.units.filter((u) => u.is_active && !u.is_base && u.unit).map((u) => ({ name: u.unit!.name, factor: u.factor })))}</p>
                   )}
                 </td>
@@ -356,7 +365,6 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   const isNew = product === null;
   const categories = useOptions("/product-categories");
   const rebateCategories = useOptions("/rebate-categories");
-  const units = useOptions("/units");
 
   const [v, setV] = useState({
     name: product?.name ?? "",
@@ -376,11 +384,21 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
     crate_container_id: String(product?.crate_container_id ?? ""),
     is_active: product?.is_active ?? true,
   });
-  const [packs, setPacks] = useState<Pack[]>(
+  const [packs] = useState<Pack[]>(
     (product?.units ?? [])
       .filter((u) => !u.is_base && u.is_active)
       .map((u) => ({ name: u.unit?.name ?? "", factor: String(u.factor), barcode: u.barcode ?? "" })),
   );
+  // Regular = sold one way; with variations = several pack sizes, one of them the smallest (stock is counted in it).
+  const [kind, setKind] = useState<ProductKind>(product?.is_bundle ? "bundle" : packs.length > 0 ? "variations" : "regular");
+  const [bundle, setBundle] = useState<BundleRow[]>(() => (product?.bundle_items ?? []).map((b) => ({
+    product_id: b.product_id, name: b.product?.name ?? "", unit_id: b.unit_id, quantity: String(b.quantity),
+    units: ((b.product as Product | undefined)?.units ?? []).filter((u) => u.is_active).sort((x, y) => x.factor - y.factor).map((u) => ({ unit_id: u.unit_id, name: u.unit?.name ?? "", factor: u.factor }))
+      .concat((b.product as Product | undefined)?.units?.some((u) => u.unit_id === b.unit_id) ? [] : [{ unit_id: b.unit_id, name: b.unit?.name ?? "", factor: 1 }]),
+  })));
+  const [rows, setRows] = useState<VariationRow[]>(() => product
+    ? [{ name: product.base_unit?.name ?? "", factor: "1", barcode: product.units.find((u) => u.is_base)?.barcode ?? "" }, ...packs]
+    : []);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [formError, setFormError] = useState<string | null>(null);
   // undefined = unchanged, string = new picture (data URL), null = remove
@@ -406,7 +424,11 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   const containerTypes = useQuery({ queryKey: ["container-types"], queryFn: () => api<{ data: { id: number; name: string; kind: string }[] }>("/container-types") });
   const ofKind = (k: string) => (containerTypes.data?.data ?? []).filter((c) => c.kind === k).map((c) => ({ value: c.id, label: c.name }));
 
-  const baseUnitName = v.base_unit_name.trim() || "bottle";
+  const baseRow = rows.find((r) => r.factor === "1");
+  // A regular product has no unit to choose: it keeps the one it has, or a new one is named after its packaging.
+  const regularUnit = v.base_unit_name.trim() || ({ rgb: "Bottle", pet: "Plastic bottle", can: "Can" } as Record<string, string>)[v.packaging] || "Piece";
+  const baseName = (kind === "bundle" ? (product?.base_unit?.name ?? "Bundle") : kind === "variations" ? baseRow?.name ?? "" : regularUnit).trim();
+  const baseUnitName = baseName ? baseName[0].toUpperCase() + baseName.slice(1) : "Bottle";
 
   const save = useMutation({
     mutationFn: () => {
@@ -418,19 +440,23 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
         packaging: v.packaging,
         category_id: Number(v.category_id),
         rebate_category_id: v.rebate_category_id ? Number(v.rebate_category_id) : null,
-        barcode: v.barcode || null,
+        barcode: (kind === "variations" ? baseRow?.barcode : v.barcode) || null,
         units_per_case: v.units_per_case ? Number(v.units_per_case) : null,
-        is_returnable: v.is_returnable,
-        tracks_expiry: v.tracks_expiry,
+        is_returnable: kind !== "bundle" && v.is_returnable,
+        tracks_expiry: kind !== "bundle" && v.tracks_expiry,
         expiry_alert_days: v.tracks_expiry && v.expiry_alert_days ? Number(v.expiry_alert_days) : null,
         bottle_container_id: v.is_returnable && v.bottle_container_id ? Number(v.bottle_container_id) : null,
         crate_container_id: v.is_returnable && v.crate_container_id ? Number(v.crate_container_id) : null,
         is_active: v.is_active,
-        units: packs
-          .filter((p) => p.name.trim())
-          .map((p) => ({ name: p.name.trim(), factor: Number(p.factor), barcode: p.barcode || null })),
+        ...(kind === "bundle" ? {
+          ...(isNew ? { is_bundle: true } : {}),
+          bundle_items: bundle.map((b) => ({ product_id: b.product_id, unit_id: b.unit_id, quantity: Number(b.quantity) })),
+        } : {}),
+        units: kind === "variations"
+          ? rows.filter((r) => r.factor !== "1" && r.name.trim()).map((r) => ({ name: r.name.trim(), factor: Number(r.factor), barcode: r.barcode || null }))
+          : [],
       };
-      if (isNew || v.base_unit_name.trim().toLowerCase() !== (product.base_unit?.name ?? "").toLowerCase()) body.base_unit_name = v.base_unit_name.trim();
+      if (isNew || baseName.toLowerCase() !== (product.base_unit?.name ?? "").toLowerCase()) body.base_unit_name = baseName;
 
       return (isNew ? api<Product>("/products", { method: "POST", body }) : api<Product>(`/products/${product.id}`, { method: "PUT", body })).then(async (saved) => {
         const id = saved.id ?? product?.id;
@@ -446,23 +472,19 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
     },
   });
 
-  const updatePack = (i: number, patch: Partial<Pack>) => setPacks((cur) => cur.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
-
-  // One tap adds a fraction of the biggest variation, e.g. a half or quarter of a 24-can pack.
-  const biggest = Math.max(0, ...packs.map((p) => Number(p.factor) || 0));
-  const fractions = [[2, "Half"], [4, "Quarter"]] as const;
-  const addFraction = (div: number, word: string) => {
-    const top = packs.reduce<Pack | null>((best, p) => (!best || Number(p.factor) > Number(best.factor) ? p : best), null);
-    if (!top) return;
-    setPacks((cur) => [...cur, { name: `${word} ${top.name.toLowerCase()}`, factor: String(Math.floor(biggest / div)), barcode: "" }]);
-  };
-
   const toggleRow =
     "flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-white p-3.5 text-sm transition hover:border-[#ff3b3f]/40 hover:bg-[#fff5f5] has-[:checked]:border-[#ff3b3f]/50 has-[:checked]:bg-[#fff1f1]";
 
   return (
     <Modal title={isNew ? "Add product" : `Edit ${product.name}`} onClose={onClose}>
       <form onSubmit={(e) => { e.preventDefault(); setErrors({}); setFormError(null); save.mutate(); }} className="space-y-6">
+        <ProductTypeCards value={kind} lockedTo={product ? (product.is_bundle ? "bundle" : "regular") : undefined} onChange={(k) => {
+          // Switching keeps what was typed: the regular unit becomes the smallest variation, and back.
+          if (k === "variations" && rows.length === 0 && v.base_unit_name.trim()) setRows([{ name: v.base_unit_name.trim(), factor: "1", barcode: v.barcode }]);
+          if (k === "regular" && baseRow) setV((cur) => ({ ...cur, base_unit_name: baseRow.name, barcode: baseRow.barcode }));
+          setKind(k);
+        }} />
+
         {/* 1 — Basics */}
         <section>
           <SectionTitle n="1" title="Product details" hint="How this product is named and identified." />
@@ -518,73 +540,22 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
           </div>
         </section>
 
-        {/* 3 — Variations */}
-        <section className="rounded-2xl border border-line bg-[#fffafa] p-4">
-          <SectionTitle n="3" title="Variations" hint="The ways this product is sold. Stock is counted in the smallest one, so any bigger variation can be split back into it." />
-          <datalist id="variation-names">{units.map((u) => <option key={u.value} value={u.label} />)}</datalist>
+        {/* 3 — How it is sold */}
+        {kind === "variations" && (
+          <VariationsBox rows={rows} onChange={setRows} errors={errors} baseError={errors.base_unit_id?.[0] ?? errors.base_unit_name?.[0]} />
+        )}
+        {kind === "bundle" && <BundleBox rows={bundle} onChange={setBundle} errors={errors} bundleId={product?.id} />}
+        {kind !== "variations" && <Field label="Barcode" value={v.barcode} onChange={text("barcode")} error={errors.barcode?.[0]} />}
 
-          <div className="rounded-xl border border-line bg-white p-3.5 shadow-sm">
-            <p className="mb-2 text-xs font-semibold tracking-wide text-ink-soft uppercase">Smallest variation (1 each)</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <VariationPicker label="Name" required value={v.base_unit_name} onPick={(name) => set("base_unit_name", name)}
-                exclude={packs.map((x) => x.name)} error={errors.base_unit_id?.[0] ?? errors.base_unit_name?.[0]}
-                hint={isNew ? "What stock is counted in." : "You can change this any time. Stock and past sales stay the same; they just show the new name."} />
-              <Field label="Barcode" value={v.barcode} onChange={text("barcode")} />
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="text-ink-soft">Quick pick:</span>
-              {["Bottle", "Plastic bottle", "Can", "Sachet", "Carton"].map((n) => (
-                <button key={n} type="button" onClick={() => set("base_unit_name", n)}
-                  className={`rounded-full border px-2.5 py-1 font-semibold transition ${v.base_unit_name.trim().toLowerCase() === n.toLowerCase() ? "border-[#f40009] bg-[#ffe9ea] text-[#f40009]" : "border-line bg-white hover:bg-paper"}`}>
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <p className="mt-5 mb-2 text-sm font-semibold">Bigger variations</p>
-          <div className="space-y-3">
-            {packs.length === 0 && (
-              <p className="rounded-xl border border-dashed border-line bg-white px-4 py-3 text-sm text-ink-soft">
-                None yet. Add a crate, a pack, or a half or quarter pack if you sell this in bulk.
-              </p>
-            )}
-            {packs.map((p, i) => (
-              <div key={i} className="grid gap-3 rounded-xl border border-line bg-white p-3.5 shadow-sm sm:grid-cols-[1fr_8rem_1fr_auto] sm:items-end">
-                <VariationPicker label="Variation" value={p.name}
-                  onPick={(name, u) => updatePack(i, { name, ...(u?.usual_size && u.usual_size > 1 && !p.factor ? { factor: String(u.usual_size) } : {}) })}
-                  exclude={[v.base_unit_name, ...packs.filter((_, idx) => idx !== i).map((x) => x.name)]} error={errors[`units.${i}.unit_id`]?.[0]} />
-                <Field label={`${baseUnitName}s inside`} inputMode="numeric" value={p.factor} onChange={(e) => updatePack(i, { factor: e.target.value.replace(/[^\d]/g, "") })}
-                  error={errors[`units.${i}.factor`]?.[0]} />
-                <Field label="Barcode" value={p.barcode} onChange={(e) => updatePack(i, { barcode: e.target.value })} />
-                <button type="button" onClick={() => setPacks((cur) => cur.filter((_, idx) => idx !== i))}
-                  className={`min-h-10 rounded-lg px-3 text-sm font-semibold ${ERR} transition hover:bg-red-50`}>
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-          {errors.units?.[0] && <p role="alert" className={`mt-2 text-xs ${ERR}`}>{errors.units[0]}</p>}
-          <div className="mt-3 flex flex-wrap gap-2">
-            {packs.length < 6 && (
-              <Button type="button" variant="secondary" onClick={() => setPacks((cur) => [...cur, { name: "", factor: "", barcode: "" }])}>
-                <Svg d={I.plus} /> Add a variation
-              </Button>
-            )}
-            {packs.length > 0 && packs.length < 6 && fractions.filter(([d]) => biggest % d === 0 && biggest / d >= 2).map(([d, word]) => (
-              <Button key={word} type="button" variant="secondary" onClick={() => addFraction(d, word)}>{`${word} of the biggest (${biggest / d})`}</Button>
-            ))}
-          </div>
-          <div className="mt-4">
-            <Field label={`${baseUnitName}s in a physical case`} inputMode="numeric" value={v.units_per_case} onChange={text("units_per_case")}
-              error={errors.units_per_case?.[0]} hint="How Coca-Cola counts volume for rebates. Leave empty to use the biggest variation." />
-          </div>
-        </section>
+        {kind !== "bundle" && <Field label={`${baseUnitName}s in a physical case (for rebates)`} inputMode="numeric" value={v.units_per_case} onChange={text("units_per_case")}
+          error={errors.units_per_case?.[0]} hint={kind === "variations" ? "How Coca-Cola counts volume for rebates. Leave empty to use the biggest variation." : "How Coca-Cola counts volume for rebates."} />}
 
         {/* 4 — Options */}
         <section>
           <SectionTitle n="4" title="Options" />
           <div className="grid gap-3 sm:grid-cols-2">
+            {kind !== "bundle" && (
+              <>
             <label className={toggleRow}>
               <input type="checkbox" className="mt-0.5 size-4 accent-[#f40009]" checked={v.is_returnable} onChange={(e) => set("is_returnable", e.target.checked)} />
               <span>
@@ -605,6 +576,8 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
                 <input inputMode="numeric" value={v.expiry_alert_days} onChange={(e) => set("expiry_alert_days", e.target.value.replace(/[^\d]/g, ""))} placeholder="30" className="mt-1 min-h-11 w-full rounded-xl border border-line bg-surface px-3 text-sm font-normal" />
               </label>
             )}
+              </>
+            )}
             <label className={toggleRow}>
               <input type="checkbox" className="mt-0.5 size-4 accent-[#f40009]" checked={v.is_active} onChange={(e) => set("is_active", e.target.checked)} />
               <span>
@@ -615,7 +588,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
           </div>
         </section>
 
-        {v.is_returnable && (
+        {kind !== "bundle" && v.is_returnable && (
           <section className="rounded-2xl border border-line bg-[#fffafa] p-4">
             <SectionTitle n="5" title="Bottles and crates" hint="Which containers go out with this product, so deposits and empties can be tracked. Add container types under Stock › Crates & bottles." />
             <div className="grid gap-4 sm:grid-cols-2">
@@ -632,7 +605,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
 
         <div className="flex justify-end gap-2 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" busy={save.isPending}>{isNew ? "Add product" : "Save changes"}</Button>
+          <Button type="submit" busy={save.isPending} disabled={kind === "bundle" ? bundle.length === 0 || bundle.some((b) => !(Number(b.quantity) > 0)) : kind === "variations" ? !baseRow || rows.some((r) => r.factor !== "1" && Number(r.factor) < 2) : !baseName}>{isNew ? "Add product" : "Save changes"}</Button>
         </div>
       </form>
     </Modal>

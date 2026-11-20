@@ -146,6 +146,9 @@ export type Product = {
   rebate_category?: { id: number; name: string } | null;
   base_unit?: Unit;
   units: ProductUnit[];
+  /** A bundle is made of other products and has no stock of its own. */
+  is_bundle?: boolean;
+  bundle_items?: { id: number; product_id: number; unit_id: number; quantity: number; base_quantity: number; product?: { id: number; name: string; sku: string }; unit?: { id: number; name: string } }[];
 };
 
 export type PriceList = {
