@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { VariationPicker } from "../../../components/variation-picker";
 import Link from "next/link";
 import { useDeferredValue, useState } from "react";
 import { ImportProductsButton } from "../../../components/import-buttons";
@@ -525,8 +526,8 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
           <div className="rounded-xl border border-line bg-white p-3.5 shadow-sm">
             <p className="mb-2 text-xs font-semibold tracking-wide text-ink-soft uppercase">Smallest variation (1 each)</p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Name" list="variation-names" value={v.base_unit_name} onChange={(e) => set("base_unit_name", e.target.value)} required
-                placeholder="Bottle, Can…" error={errors.base_unit_id?.[0] ?? errors.base_unit_name?.[0]}
+              <VariationPicker label="Name" required value={v.base_unit_name} onPick={(name) => set("base_unit_name", name)}
+                exclude={packs.map((x) => x.name)} error={errors.base_unit_id?.[0] ?? errors.base_unit_name?.[0]}
                 hint={isNew ? "What stock is counted in." : "You can change this any time. Stock and past sales stay the same; they just show the new name."} />
               <Field label="Barcode" value={v.barcode} onChange={text("barcode")} />
             </div>
@@ -550,8 +551,9 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
             )}
             {packs.map((p, i) => (
               <div key={i} className="grid gap-3 rounded-xl border border-line bg-white p-3.5 shadow-sm sm:grid-cols-[1fr_8rem_1fr_auto] sm:items-end">
-                <Field label="Name" list="variation-names" value={p.name} onChange={(e) => updatePack(i, { name: e.target.value })} placeholder="Crate, Half pack…"
-                  error={errors[`units.${i}.unit_id`]?.[0]} />
+                <VariationPicker label="Variation" value={p.name}
+                  onPick={(name, u) => updatePack(i, { name, ...(u?.usual_size && u.usual_size > 1 && !p.factor ? { factor: String(u.usual_size) } : {}) })}
+                  exclude={[v.base_unit_name, ...packs.filter((_, idx) => idx !== i).map((x) => x.name)]} error={errors[`units.${i}.unit_id`]?.[0]} />
                 <Field label={`${baseUnitName}s inside`} inputMode="numeric" value={p.factor} onChange={(e) => updatePack(i, { factor: e.target.value.replace(/[^\d]/g, "") })}
                   error={errors[`units.${i}.factor`]?.[0]} />
                 <Field label="Barcode" value={p.barcode} onChange={(e) => updatePack(i, { barcode: e.target.value })} />

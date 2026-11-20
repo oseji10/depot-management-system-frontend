@@ -149,7 +149,7 @@ function SchedulePage() {
             <tbody>
               {viewing.lines.map((l) => (
                 <tr key={l.id} className="border-b border-line/60 last:border-0">
-                  <td className="py-1.5">{l.label}{l.source === "target" && <Badge tone="good">Sales reward</Badge>}{l.source === "staff_charge" && <Badge tone="warn">Staff charge</Badge>}</td>
+                  <td className="py-1.5">{l.label}{l.source === "target" && <Badge tone="good">Sales reward</Badge>}{l.source === "staff_charge" && <Badge tone="warn">Staff charge</Badge>}{l.source === "overtime" && <Badge tone="good">Overtime</Badge>}</td>
                   <td className={`py-1.5 text-right tabular-nums ${l.kind === "deduction" ? "text-[#c23a3a]" : ""}`}>{l.kind === "deduction" ? "−" : ""}{formatKobo(l.amount)}</td>
                 </tr>
               ))}

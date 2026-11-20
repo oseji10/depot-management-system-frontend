@@ -76,7 +76,7 @@ function RunPage() {
                   <tbody>
                     {p.lines.map((l) => (
                       <tr key={l.id} className="border-b border-line/60 last:border-0">
-                        <td className="py-1.5">{l.label}{l.source === "staff_charge" && <Badge tone="warn">Staff charge</Badge>}</td>
+                        <td className="py-1.5">{l.label}{l.source === "staff_charge" && <Badge tone="warn">Staff charge</Badge>}{l.source === "overtime" && <Badge tone="good">Overtime</Badge>}</td>
                         <td className={`py-1.5 text-right tabular-nums ${l.kind === "deduction" ? "text-[#c23a3a]" : ""}`}>{l.kind === "deduction" ? "−" : ""}{formatKobo(l.amount)}</td>
                         <td className="w-16 py-1.5 text-right">{draft && l.source === "manual" && <button type="button" onClick={() => removeLine.mutate(l.id)} className="text-xs font-semibold text-[#c23a3a] hover:underline">Remove</button>}</td>
                       </tr>

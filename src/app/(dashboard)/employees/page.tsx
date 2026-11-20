@@ -89,7 +89,7 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
 
   const [f, setF] = useState({
     name: employee?.name ?? "", phone: employee?.phone ?? "", job_title: employee?.job_title ?? "",
-    department: employee?.department ?? "", hired_on: employee?.hired_on ?? "", basic: koboToInput(employee?.basic_salary ?? 0),
+    department: employee?.department ?? "", hired_on: employee?.hired_on ?? "", basic: koboToInput(employee?.basic_salary ?? 0), overtime: koboToInput(employee?.overtime_rate ?? 0),
     bank_name: employee?.bank_name ?? "", account_number: employee?.account_number ?? "", account_name: employee?.account_name ?? "", status: employee?.status ?? "active", user_id: String(employee?.user_id ?? ""),
   });
   const [branchIds, setBranchIds] = useState<number[]>(employee?.branches?.length ? employee.branches.map((b) => b.id) : employee?.branch_id ? [employee.branch_id] : []);
@@ -112,7 +112,7 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
       });
       const body = {
         user_id: f.user_id ? Number(f.user_id) : null, name: f.name, branch_id: branchIds[0] ?? null, branch_ids: branchIds, phone: f.phone || null, job_title: f.job_title || null, department: f.department || null,
-        hired_on: f.hired_on || null, basic_salary: nairaToKobo(f.basic), bank_name: f.bank_name || null, account_number: f.account_number || null,
+        hired_on: f.hired_on || null, basic_salary: nairaToKobo(f.basic), overtime_rate: f.overtime ? nairaToKobo(f.overtime) : null, bank_name: f.bank_name || null, account_number: f.account_number || null,
         account_name: f.account_name || null, status: f.status, pay_items,
       };
       return api(employee ? `/employees/${employee.id}` : "/employees", { method: employee ? "PUT" : "POST", body });
@@ -133,6 +133,7 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
           <Field label="Phone" value={f.phone} onChange={(e) => set("phone")(e.target.value)} />
           <Field label="Start date" type="date" value={f.hired_on} onChange={(e) => set("hired_on")(e.target.value)} />
           <MoneyField label="Monthly basic salary" value={f.basic} onChange={set("basic")} required />
+          <MoneyField label="Overtime rate per hour (optional)" value={f.overtime} onChange={set("overtime")} hint="Used when you record overtime for this person. Leave empty to type the rate each time." />
           {employee && <SelectField label="Status" value={f.status} onChange={set("status")} options={[{ value: "active", label: "Current staff" }, { value: "left", label: "Left the business" }]} />}
         </div>
 

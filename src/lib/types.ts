@@ -111,7 +111,7 @@ export type RebateCategory = {
   products_count?: number;
 };
 
-export type Unit = { id: number; name: string; abbreviation: string };
+export type Unit = { id: number; name: string; abbreviation: string; usual_size?: number | null; products_count?: number };
 
 export type ProductUnit = {
   id: number;
@@ -869,7 +869,7 @@ export type Employee = {
   id: number; staff_no: string; name: string; phone: string | null; job_title: string | null; department: string | null;
   user_id: number | null; user?: { id: number; name: string; email: string } | null;
   branch_id: number; branch?: { id: number; name: string } | null; branches?: { id: number; name: string }[]; hired_on: string | null; left_on: string | null; status: "active" | "left" | "archived";
-  basic_salary: number; bank_name: string | null; account_number: string | null; account_name: string | null; notes: string | null;
+  basic_salary: number; overtime_rate?: number | null; bank_name: string | null; account_number: string | null; account_name: string | null; notes: string | null;
   pay_items?: { pay_item_id: number; value: number | null }[];
   charges?: { id: number; number: string; reason: string; description: string; amount: number; recovered: number; installments: number; status: string }[];
 };
@@ -878,7 +878,7 @@ export type PayItem = {
   id: number; name: string; kind: "earning" | "deduction"; calc: "fixed" | "percent_of_basic"; value: number; apply_to_all: boolean; is_active: boolean;
 };
 
-export type PayslipLine = { id: number; kind: "earning" | "deduction"; source: "basic" | "pay_item" | "staff_charge" | "target" | "manual"; label: string; amount: number };
+export type PayslipLine = { id: number; kind: "earning" | "deduction"; source: "basic" | "pay_item" | "staff_charge" | "target" | "overtime" | "manual"; label: string; amount: number };
 
 export type Payslip = {
   id: number; basic: number; gross: number; charges_total: number; other_deductions: number; net: number;
@@ -1054,4 +1054,10 @@ export type ProformaCatalogueProduct = {
   sku: string;
   size_label: string | null;
   units: { unit_id: number; name: string; factor: number; price: number }[];
+};
+
+export type OvertimeEntry = {
+  id: number; employee_id: number; worked_on: string; hours: number; rate: number; amount: number; note: string | null;
+  status: "pending" | "approved" | "rejected" | "paid"; decision_note: string | null; decided_at: string | null; payroll_run_id: number | null;
+  employee?: { id: number; name: string; staff_no: string }; creator?: { id: number; name: string } | null; decider?: { id: number; name: string } | null;
 };

@@ -133,6 +133,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
       title: "Catalogue",
       items: [
         { href: "/products", label: "Products", icon: "products", show: s.can("products.view") },
+        { href: "/variations", label: "Variations", icon: "units", show: s.can("products.view") },
         { href: "/categories", label: "Categories", icon: "categories", show: s.can("products.view") },
         { href: "/rebate-categories", label: "Rebate categories", icon: "rebate", show: s.can("products.view") },
         { href: "/price-lists", label: "Price lists", icon: "price", show: s.can("pricing.view") },
@@ -174,6 +175,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
         { href: "/employees", label: "Employees", icon: "users", show: !isRep && s.can("employees.view") },
         { href: "/payroll", label: "Payroll", icon: "calc", show: !isRep && s.can("payroll.view") },
         { href: "/payroll/schedule", label: "Salary schedule", icon: "calc", show: !isRep && s.can("payroll.view") },
+        { href: "/overtime", label: "Overtime", icon: "discrepancy", show: !isRep && s.can("employees.view") },
         { href: "/staff-charges", label: "Staff charges", icon: "discrepancy", show: !isRep && s.can("staff-charges.view") },
       ],
     },
