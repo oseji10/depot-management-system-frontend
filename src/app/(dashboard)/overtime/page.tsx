@@ -10,8 +10,10 @@ import type { Employee, OvertimeEntry, Paginated } from "../../../lib/types";
 
 const LABEL = { pending: "Waiting for approval", approved: "Approved, not yet paid", rejected: "Rejected", paid: "Paid" } as const;
 const TONE = { pending: "warn", approved: "good", rejected: "bad", paid: "neutral" } as const;
-type Totals = Partial<Record<keyof typeof LABEL, { hours: number; amount: number; count: number }>>;
+type Totals = Partial<Record<keyof typeof LABEL, { hours: number; sundays?: number; amount: number; count: number }>>;
 const hrs = (n: number) => `${Number(n.toFixed(2))} hr${n === 1 ? "" : "s"}`;
+const qtyLabel = (r: OvertimeEntry) => (r.kind === "sunday" ? "1 day" : r.basis === "day" ? `${Number(r.hours)} day${Number(r.hours) === 1 ? "" : "s"}` : hrs(Number(r.hours)));
+const isSunday = (d: string) => !!d && new Date(`${d}T12:00:00`).getDay() === 0;
 const today = () => new Date().toISOString().slice(0, 10);
 const monthStart = () => today().slice(0, 8) + "01";
 
@@ -23,13 +25,14 @@ export default function OvertimePage() {
   const [employee, setEmployee] = useState("");
   const [from, setFrom] = useState(monthStart());
   const [to, setTo] = useState(today());
-  const [editing, setEditing] = useState<OvertimeEntry | "new" | null>(null);
+  const [editing, setEditing] = useState<OvertimeEntry | "overtime" | "sunday" | null>(null);
+  const [kind, setKind] = useState("");
   const [picked, setPicked] = useState<number[]>([]);
   const canManage = s.can("employees.manage");
   const canApprove = s.can("payroll.approve");
 
   const employees = useQuery({ queryKey: ["employees-all"], queryFn: async () => (await api<Paginated<Employee>>("/employees?per_page=100")).data });
-  const qs = new URLSearchParams({ per_page: "100", ...(status && { status }), ...(employee && { employee_id: employee }), ...(from && { from }), ...(to && { to }) });
+  const qs = new URLSearchParams({ per_page: "100", ...(status && { status }), ...(kind && { kind }), ...(employee && { employee_id: employee }), ...(from && { from }), ...(to && { to }) });
   const list = useQuery({ queryKey: ["overtime", qs.toString()], queryFn: () => api<Paginated<OvertimeEntry> & { totals: Totals }>(`/overtime?${qs}`) });
   const refresh = () => { setPicked([]); return qc.invalidateQueries({ queryKey: ["overtime"] }); };
 
@@ -46,9 +49,14 @@ export default function OvertimePage() {
   return (
     <>
       <PageHeader
-        title="Overtime"
-        description="Record extra hours staff worked. Once approved, they are paid on the next payroll run as an Overtime earning."
-        action={canManage && <Button onClick={() => setEditing("new")}>Record overtime</Button>}
+        title="Overtime & Sunday work"
+        description="Record overtime and Sunday work. Rates come from each person's staff grade. Once approved, they are paid on the next payroll run."
+        action={canManage && (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => setEditing("sunday")}>Record Sunday work</Button>
+            <Button onClick={() => setEditing("overtime")}>Record overtime</Button>
+          </div>
+        )}
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
@@ -57,7 +65,7 @@ export default function OvertimePage() {
             className={`rounded-2xl border bg-surface p-4 text-left shadow-sm transition ${status === k ? "border-[#f40009]" : "border-line hover:border-ink-soft/40"}`}>
             <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">{LABEL[k]}</p>
             <p className="mt-1 text-2xl font-bold tabular-nums">{formatKobo(t[k]?.amount ?? 0)}</p>
-            <p className="text-sm text-ink-soft">{hrs(t[k]?.hours ?? 0)} · {t[k]?.count ?? 0} entr{(t[k]?.count ?? 0) === 1 ? "y" : "ies"}</p>
+            <p className="text-sm text-ink-soft">{t[k]?.count ?? 0} entr{(t[k]?.count ?? 0) === 1 ? "y" : "ies"}{(t[k]?.sundays ?? 0) > 0 ? ` · ${t[k]?.sundays} Sunday${t[k]?.sundays === 1 ? "" : "s"}` : ""}</p>
           </button>
         ))}
       </div>
@@ -66,6 +74,11 @@ export default function OvertimePage() {
         <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm">
           <option value="">Any status</option>
           {Object.entries(LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <select aria-label="Type" value={kind} onChange={(e) => setKind(e.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm">
+          <option value="">Overtime and Sunday work</option>
+          <option value="overtime">Overtime only</option>
+          <option value="sunday">Sunday work only</option>
         </select>
         <select aria-label="Employee" value={employee} onChange={(e) => setEmployee(e.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm">
           <option value="">All staff</option>
@@ -91,13 +104,13 @@ export default function OvertimePage() {
           <thead className="border-b border-line bg-[#fff5f5] text-[11px] tracking-wider text-ink-soft uppercase">
             <tr>
               {canApprove && <th className="w-10 py-3.5 pl-4"><span className="sr-only">Select</span></th>}
-              <th className={th}>Employee</th><th className={th}>Date</th><th className={`${th} text-right`}>Hours</th><th className={`${th} text-right`}>Rate / hr</th>
+              <th className={th}>Employee</th><th className={th}>Date</th><th className={th}>Type</th><th className={`${th} text-right`}>Quantity</th><th className={`${th} text-right`}>Rate</th>
               <th className={`${th} text-right`}>Amount</th><th className={th}>Status</th><th className={th}><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {list.isLoading ? <TableLoading cols={8} /> : list.error ? <TableError cols={8} message={(list.error as Error).message} />
-              : rows.length === 0 ? <TableEmpty cols={8} title="No overtime in this period" hint="Record the extra hours someone worked, then approve them before the payroll run." />
+            {list.isLoading ? <TableLoading cols={9} /> : list.error ? <TableError cols={9} message={(list.error as Error).message} />
+              : rows.length === 0 ? <TableEmpty cols={9} title="No overtime in this period" hint="Record the extra hours someone worked, then approve them before the payroll run." />
               : rows.map((r) => (
                 <tr key={r.id} className="align-top">
                   {canApprove && (
@@ -107,13 +120,14 @@ export default function OvertimePage() {
                   )}
                   <td className="px-4 py-3">
                     <p className="font-medium">{r.employee?.name}</p>
-                    <p className="text-xs text-ink-soft">{r.employee?.staff_no}{r.creator ? ` · recorded by ${r.creator.name}` : ""}</p>
+                    <p className="text-xs text-ink-soft">{r.employee?.staff_no}{r.employee?.grade ? ` · ${r.employee.grade.name}` : ""}{r.creator ? ` · recorded by ${r.creator.name}` : ""}</p>
                     {r.note && <p className="text-xs italic text-ink-soft">“{r.note}”</p>}
                     {r.decision_note && <p className="text-xs text-ink-soft">Note: {r.decision_note}</p>}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{formatDate(r.worked_on)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{Number(r.hours)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatKobo(r.rate)}</td>
+                  <td className="px-4 py-3">{r.kind === "sunday" ? <Badge tone="warn">Sunday work</Badge> : <Badge tone="neutral">Overtime</Badge>}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{qtyLabel(r)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{formatKobo(r.rate)}<span className="block text-xs text-ink-soft">per {r.kind === "sunday" || r.basis === "day" ? "day" : "hour"}</span></td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">{formatKobo(r.amount)}</td>
                   <td className="px-4 py-3"><Badge tone={TONE[r.status]}>{LABEL[r.status]}</Badge></td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -134,47 +148,76 @@ export default function OvertimePage() {
         </table>
       </div>
 
-      {editing && <OvertimeModal entry={editing === "new" ? null : editing} employees={employees.data ?? []} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void refresh(); }} />}
+      {editing && <OvertimeModal entry={typeof editing === "string" ? null : editing} kind={typeof editing === "string" ? editing : editing.kind ?? "overtime"} employees={employees.data ?? []} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void refresh(); }} />}
     </>
   );
 }
 
-function OvertimeModal({ entry, employees, onClose, onSaved }: { entry: OvertimeEntry | null; employees: Employee[]; onClose: () => void; onSaved: () => void }) {
+function OvertimeModal({ entry, kind, employees, onClose, onSaved }: { entry: OvertimeEntry | null; kind: "overtime" | "sunday"; employees: Employee[]; onClose: () => void; onSaved: () => void }) {
+  const sunday = kind === "sunday";
+  const lastSunday = () => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return d.toISOString().slice(0, 10); };
   const [f, setF] = useState({
-    employee_id: String(entry?.employee_id ?? ""), worked_on: entry?.worked_on ?? today(), hours: entry ? String(Number(entry.hours)) : "",
-    rate: entry ? koboToInput(entry.rate) : "", note: entry?.note ?? "",
+    employee_id: String(entry?.employee_id ?? ""), worked_on: entry?.worked_on ?? (sunday ? lastSunday() : today()),
+    qty: entry && !sunday ? String(Number(entry.hours)) : "", rate: entry && !sunday && entry.rate ? koboToInput(entry.rate) : "", note: entry?.note ?? "",
   });
   const set = (k: keyof typeof f) => (v: string) => setF((p) => ({ ...p, [k]: v }));
   const person = employees.find((e) => String(e.id) === f.employee_id);
-  const defaultRate = person?.overtime_rate ?? 0;
-  const rate = f.rate ? nairaToKobo(f.rate) : defaultRate;
-  const hours = Number(f.hours) || 0;
+  const grade = person?.grade ?? null;
+
+  // What the server will use: a typed rate, else the person's own rate, else their grade's rate and basis.
+  const ownRate = person?.overtime_rate ?? 0;
+  const basis: "hour" | "day" = f.rate || ownRate ? "hour" : grade?.overtime_basis ?? "hour";
+  const rate = f.rate ? nairaToKobo(f.rate) : ownRate || grade?.overtime_rate || 0;
+  const qty = Number(f.qty) || (basis === "day" && !f.qty ? 1 : 0);
+  const sundayPay = person ? Math.round(person.basic_salary / (grade?.sunday_divisor || 30)) : 0;
+  const pay = sunday ? sundayPay : Math.round(qty * rate);
 
   const save = useMutation({
     mutationFn: () => {
-      const body = { employee_id: Number(f.employee_id), worked_on: f.worked_on, hours, rate: f.rate ? nairaToKobo(f.rate) : null, note: f.note || null };
+      const body = sunday
+        ? { kind: "sunday", employee_id: Number(f.employee_id), worked_on: f.worked_on, note: f.note || null }
+        : { kind: "overtime", employee_id: Number(f.employee_id), worked_on: f.worked_on, hours: qty, basis, rate: f.rate ? nairaToKobo(f.rate) : null, note: f.note || null };
       return entry ? api(`/overtime/${entry.id}`, { method: "PUT", body }) : api("/overtime", { method: "POST", body });
     },
     onSuccess: onSaved,
   });
 
+  const badDay = sunday && !isSunday(f.worked_on);
+  const ready = !!f.employee_id && !badDay && pay > 0;
+
   return (
-    <Modal title={entry ? "Edit overtime" : "Record overtime"} onClose={onClose}>
+    <Modal title={sunday ? (entry ? "Edit Sunday work" : "Record Sunday work") : (entry ? "Edit overtime" : "Record overtime")} onClose={onClose}>
       <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
         <SelectField label="Employee" value={f.employee_id} onChange={set("employee_id")} required
-          options={[{ value: "", label: "Choose an employee" }, ...employees.filter((e) => e.status === "active").map((e) => ({ value: String(e.id), label: e.name }))]} />
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Date worked" type="date" value={f.worked_on} max={today()} onChange={(e) => set("worked_on")(e.target.value)} required />
-          <Field label="Hours" inputMode="decimal" value={f.hours} onChange={(e) => set("hours")(e.target.value.replace(/[^\d.]/g, ""))} placeholder="e.g. 3 or 2.5" required />
-        </div>
-        <MoneyField label="Rate per hour" value={f.rate} onChange={set("rate")}
-          hint={defaultRate ? `Leave empty to use ${person?.name}'s rate of ${formatKobo(defaultRate)} per hour.` : "This person has no overtime rate set, so type one (or set it on the employee)."} />
-        <Field label="Note (optional)" value={f.note} onChange={(e) => set("note")(e.target.value)} placeholder="e.g. Offloading late delivery" />
-        {hours > 0 && rate > 0 && <p className="text-sm">To be paid: <strong>{formatKobo(Math.round(hours * rate))}</strong> ({hrs(hours)} × {formatKobo(rate)})</p>}
+          options={[{ value: "", label: "Choose an employee" }, ...employees.filter((e) => e.status === "active").map((e) => ({ value: String(e.id), label: `${e.name}${e.grade ? ` · ${e.grade.name}` : ""}` }))]} />
+        {sunday ? (
+          <>
+            <Field label="Sunday worked" type="date" value={f.worked_on} max={today()} onChange={(e) => set("worked_on")(e.target.value)} required
+              error={badDay ? "Pick a Sunday." : undefined} />
+            {person && (
+              <p className="rounded-xl bg-paper px-3 py-2 text-sm">
+                One day&apos;s pay: {formatKobo(person.basic_salary)} basic ÷ {grade?.sunday_divisor || 30} = <strong>{formatKobo(sundayPay)}</strong>
+                {!grade && <span className="block text-xs text-ink-soft">No staff grade, so the standard 30 is used.</span>}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Date worked" type="date" value={f.worked_on} max={today()} onChange={(e) => set("worked_on")(e.target.value)} required />
+              <Field label={basis === "day" ? "Days of overtime" : "Hours"} inputMode="decimal" value={f.qty} onChange={(e) => set("qty")(e.target.value.replace(/[^\d.]/g, ""))}
+                placeholder={basis === "day" ? "1" : "e.g. 3 or 2.5"} required={basis === "hour"} />
+            </div>
+            <MoneyField label="Rate (optional)" value={f.rate} onChange={set("rate")}
+              hint={person ? (ownRate ? `${person.name} has their own rate of ${formatKobo(ownRate)} per hour.` : grade?.overtime_rate ? `${grade.name}: ${formatKobo(grade.overtime_rate)} per ${grade.overtime_basis}. Leave empty to use it.` : "No grade rate set: type a rate, or set one under Staff grades.") : "Choose an employee first."} />
+          </>
+        )}
+        <Field label="Note (optional)" value={f.note} onChange={(e) => set("note")(e.target.value)} placeholder={sunday ? "e.g. Sunday offloading" : "e.g. Offloading late delivery"} />
+        {pay > 0 && <p className="text-sm">To be paid: <strong>{formatKobo(pay)}</strong>{!sunday && <> ({basis === "day" ? `${qty} day${qty === 1 ? "" : "s"}` : hrs(qty)} × {formatKobo(rate)})</>}</p>}
         {save.error && <ErrorNote>{(save.error as Error).message}</ErrorNote>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" busy={save.isPending} disabled={!f.employee_id || hours <= 0 || rate <= 0}>{entry ? "Save" : "Record"}</Button>
+          <Button type="submit" busy={save.isPending} disabled={!ready}>{entry ? "Save" : "Record"}</Button>
         </div>
       </form>
     </Modal>

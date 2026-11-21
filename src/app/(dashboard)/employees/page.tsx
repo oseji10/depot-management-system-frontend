@@ -8,7 +8,7 @@ import { useOptions } from "../../../hooks/options";
 import { useSession } from "../../../hooks/session";
 import { api } from "../../../lib/api";
 import { formatKobo, koboToInput, nairaToKobo } from "../../../lib/format";
-import type { Employee, PayItem, Paginated } from "../../../lib/types";
+import type { Employee, PayItem, Paginated, StaffGrade } from "../../../lib/types";
 
 export default function EmployeesPage() {
   const s = useSession();
@@ -47,7 +47,7 @@ export default function EmployeesPage() {
               : (list.data?.data.length ?? 0) === 0 ? <TableEmpty cols={5} title="No employees" hint="Add your staff so they can be paid and charged for damages." />
               : list.data!.data.map((e) => (
                 <tr key={e.id}>
-                  <td className="px-4 py-3"><p className="font-medium">{e.name} {e.user && <Badge tone="good">Has login</Badge>} {e.status === "left" && <Badge>Left</Badge>}{e.status === "archived" && <Badge>Archived</Badge>}</p><p className="text-xs text-ink-soft">{e.staff_no}{e.phone ? ` · ${e.phone}` : ""}{e.user?.email ? ` · ${e.user.email}` : ""}</p></td>
+                  <td className="px-4 py-3"><p className="font-medium">{e.name} {e.user && <Badge tone="good">Has login</Badge>} {e.status === "left" && <Badge>Left</Badge>}{e.status === "archived" && <Badge>Archived</Badge>}</p><p className="text-xs text-ink-soft">{e.staff_no}{e.phone ? ` · ${e.phone}` : ""}{e.user?.email ? ` · ${e.user.email}` : ""}{e.grade ? ` · ${e.grade.name}` : ""}</p></td>
                   <td className="px-4 py-3">{(e.branches?.length ? e.branches.map((b) => b.name) : [e.branch?.name ?? "–"]).join(", ")}</td>
                   <td className="px-4 py-3">{[e.job_title, e.department].filter(Boolean).join(" · ") || "–"}</td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">{formatKobo(e.basic_salary)}</td>
@@ -97,6 +97,8 @@ function SendResetButton({ userId, email }: { userId: number; email: string }) {
 }
 
 function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClose: () => void }) {
+  const gradesQ = useQuery({ queryKey: ["staff-grades"], queryFn: () => api<{ data: StaffGrade[] }>("/staff-grades") });
+  const grades = (gradesQ.data?.data ?? []).filter((g) => g.is_active || g.id === employee?.grade_id);
   const session = useSession();
   const [loginEmail, setLoginEmail] = useState(employee?.user?.email ?? "");
   const [loginPassword, setLoginPassword] = useState("");
@@ -108,7 +110,7 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
 
   const [f, setF] = useState({
     name: employee?.name ?? "", phone: employee?.phone ?? "", job_title: employee?.job_title ?? "",
-    department: employee?.department ?? "", hired_on: employee?.hired_on ?? "", basic: koboToInput(employee?.basic_salary ?? 0), overtime: koboToInput(employee?.overtime_rate ?? 0),
+    department: employee?.department ?? "", hired_on: employee?.hired_on ?? "", basic: koboToInput(employee?.basic_salary ?? 0), overtime: employee?.overtime_rate ? koboToInput(employee.overtime_rate) : "", grade_id: String(employee?.grade_id ?? ""),
     bank_name: employee?.bank_name ?? "", account_number: employee?.account_number ?? "", account_name: employee?.account_name ?? "", status: employee?.status ?? "active", user_id: String(employee?.user_id ?? ""),
   });
   const [branchIds, setBranchIds] = useState<number[]>(employee?.branches?.length ? employee.branches.map((b) => b.id) : employee?.branch_id ? [employee.branch_id] : []);
@@ -134,7 +136,7 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
       });
       const body = {
         user_id: f.user_id ? Number(f.user_id) : null, name: f.name, branch_id: branchIds[0] ?? null, branch_ids: branchIds, phone: f.phone || null, job_title: f.job_title || null, department: f.department || null,
-        hired_on: f.hired_on || null, basic_salary: nairaToKobo(f.basic), overtime_rate: f.overtime ? nairaToKobo(f.overtime) : null, bank_name: f.bank_name || null, account_number: f.account_number || null,
+        hired_on: f.hired_on || null, basic_salary: nairaToKobo(f.basic), overtime_rate: f.overtime ? nairaToKobo(f.overtime) : null, grade_id: f.grade_id ? Number(f.grade_id) : null, bank_name: f.bank_name || null, account_number: f.account_number || null,
         account_name: f.account_name || null, status: f.status, pay_items,
         ...(showLogin && loginEmail.trim() && loginEmail.trim().toLowerCase() !== (employee?.user?.email ?? "").toLowerCase() ? { login_email: loginEmail.trim() } : {}),
         ...(showLogin && loginPassword ? { login_password: loginPassword } : {}),
@@ -157,7 +159,10 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
           <Field label="Phone" value={f.phone} onChange={(e) => set("phone")(e.target.value)} />
           <Field label="Start date" type="date" value={f.hired_on} onChange={(e) => set("hired_on")(e.target.value)} />
           <MoneyField label="Monthly basic salary" value={f.basic} onChange={set("basic")} required />
-          <MoneyField label="Overtime rate per hour (optional)" value={f.overtime} onChange={set("overtime")} hint="Used when you record overtime for this person. Leave empty to type the rate each time." />
+          <SelectField label="Staff grade" value={f.grade_id} onChange={set("grade_id")}
+            options={[{ value: "", label: grades.length ? "Choose a grade" : "No grades yet (add them under Staff grades)" }, ...grades.map((g) => ({ value: String(g.id), label: `${g.name}${g.overtime_rate ? ` · overtime ${formatKobo(g.overtime_rate)}/${g.overtime_basis}` : ""}` }))]}
+            hint="Sets their overtime rate and Sunday pay." />
+          <MoneyField label="Own overtime rate (optional)" value={f.overtime} onChange={set("overtime")} hint="Only if this person is paid differently from their grade. Leave empty to use the grade's rate." />
           {employee && <SelectField label="Status" value={f.status} onChange={set("status")} options={[{ value: "active", label: "Current staff" }, { value: "left", label: "Left the business" }]} />}
         </div>
 

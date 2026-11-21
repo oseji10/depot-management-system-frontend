@@ -872,7 +872,7 @@ export type Employee = {
   id: number; staff_no: string; name: string; phone: string | null; job_title: string | null; department: string | null;
   user_id: number | null; user?: { id: number; name: string; email: string } | null;
   branch_id: number; branch?: { id: number; name: string } | null; branches?: { id: number; name: string }[]; hired_on: string | null; left_on: string | null; status: "active" | "left" | "archived";
-  basic_salary: number; overtime_rate?: number | null; bank_name: string | null; account_number: string | null; account_name: string | null; notes: string | null;
+  basic_salary: number; overtime_rate?: number | null; grade_id?: number | null; grade?: StaffGrade | null; bank_name: string | null; account_number: string | null; account_name: string | null; notes: string | null;
   pay_items?: { pay_item_id: number; value: number | null }[];
   charges?: { id: number; number: string; reason: string; description: string; amount: number; recovered: number; installments: number; status: string }[];
 };
@@ -1062,5 +1062,9 @@ export type ProformaCatalogueProduct = {
 export type OvertimeEntry = {
   id: number; employee_id: number; worked_on: string; hours: number; rate: number; amount: number; note: string | null;
   status: "pending" | "approved" | "rejected" | "paid"; decision_note: string | null; decided_at: string | null; payroll_run_id: number | null;
-  employee?: { id: number; name: string; staff_no: string }; creator?: { id: number; name: string } | null; decider?: { id: number; name: string } | null;
+  kind?: "overtime" | "sunday"; basis?: "hour" | "day";
+  employee?: { id: number; name: string; staff_no: string; grade?: { id: number; name: string } | null }; creator?: { id: number; name: string } | null; decider?: { id: number; name: string } | null;
 };
+
+/** A staff grade: its overtime rate (per hour or per day) and how Sunday work is paid (basic ÷ divisor). */
+export type StaffGrade = { id: number; name: string; overtime_rate: number; overtime_basis: "hour" | "day"; sunday_divisor: number; is_active: boolean; employees_count?: number };

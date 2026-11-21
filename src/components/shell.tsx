@@ -176,6 +176,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
         { href: "/payroll", label: "Payroll", icon: "calc", show: !isRep && s.can("payroll.view") },
         { href: "/payroll/schedule", label: "Salary schedule", icon: "calc", show: !isRep && s.can("payroll.view") },
         { href: "/overtime", label: "Overtime", icon: "discrepancy", show: !isRep && s.can("employees.view") },
+        { href: "/staff-grades", label: "Staff grades", icon: "discrepancy", show: !isRep && s.can("employees.view") },
         { href: "/staff-charges", label: "Staff charges", icon: "discrepancy", show: !isRep && s.can("staff-charges.view") },
       ],
     },
@@ -198,6 +199,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
       items: [
         { href: "/stores", label: "Stores", icon: "stores", show: s.isPlatform },
         { href: "/business", label: "My business", icon: "stores", show: s.can("business.manage") },
+        { href: "/daily-report", label: "Daily sales report", icon: "reports", show: s.can("business.manage") },
         { href: "/subscription", label: "Subscription", icon: "reports", show: s.can("business.manage") && !s.isPlatform },
         { href: "/subscriptions", label: "Subscriptions", icon: "reports", show: s.isPlatform },
         { href: "/branches", label: "Branches", icon: "branches", show: s.can("branches.view") },
