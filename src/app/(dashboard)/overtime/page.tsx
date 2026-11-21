@@ -103,7 +103,16 @@ export default function OvertimePage() {
         <table className="w-full min-w-[56rem] text-left text-sm">
           <thead className="border-b border-line bg-[#fff5f5] text-[11px] tracking-wider text-ink-soft uppercase">
             <tr>
-              {canApprove && <th className="w-10 py-3.5 pl-4"><span className="sr-only">Select</span></th>}
+              {canApprove && (
+                <th className="w-10 py-3.5 pl-4">
+                  {pending.length > 0 && (
+                    <input type="checkbox" aria-label="Select all waiting entries" className="size-4 accent-[#f40009]"
+                      checked={pending.every((r) => picked.includes(r.id))}
+                      ref={(el) => { if (el) el.indeterminate = picked.length > 0 && !pending.every((r) => picked.includes(r.id)); }}
+                      onChange={() => setPicked(pending.every((r) => picked.includes(r.id)) ? [] : pending.map((r) => r.id))} />
+                  )}
+                </th>
+              )}
               <th className={th}>Employee</th><th className={th}>Date</th><th className={th}>Type</th><th className={`${th} text-right`}>Quantity</th><th className={`${th} text-right`}>Rate</th>
               <th className={`${th} text-right`}>Amount</th><th className={th}>Status</th><th className={th}><span className="sr-only">Actions</span></th>
             </tr>
@@ -168,7 +177,8 @@ function OvertimeModal({ entry, kind, employees, onClose, onSaved }: { entry: Ov
   const ownRate = person?.overtime_rate ?? 0;
   const basis: "hour" | "day" = f.rate || ownRate ? "hour" : grade?.overtime_basis ?? "hour";
   const rate = f.rate ? nairaToKobo(f.rate) : ownRate || grade?.overtime_rate || 0;
-  const qty = Number(f.qty) || (basis === "day" && !f.qty ? 1 : 0);
+  // A per-day rate pays one day for the date worked; a per-hour rate needs the hours.
+  const qty = basis === "day" ? 1 : Number(f.qty) || 0;
   const sundayPay = person ? Math.round(person.basic_salary / (grade?.sunday_divisor || 30)) : 0;
   const pay = sunday ? sundayPay : Math.round(qty * rate);
 
@@ -203,10 +213,11 @@ function OvertimeModal({ entry, kind, employees, onClose, onSaved }: { entry: Ov
           </>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className={basis === "hour" ? "grid grid-cols-2 gap-3" : ""}>
               <Field label="Date worked" type="date" value={f.worked_on} max={today()} onChange={(e) => set("worked_on")(e.target.value)} required />
-              <Field label={basis === "day" ? "Days of overtime" : "Hours"} inputMode="decimal" value={f.qty} onChange={(e) => set("qty")(e.target.value.replace(/[^\d.]/g, ""))}
-                placeholder={basis === "day" ? "1" : "e.g. 3 or 2.5"} required={basis === "hour"} />
+              {basis === "hour" && (
+                <Field label="Hours" inputMode="decimal" value={f.qty} onChange={(e) => set("qty")(e.target.value.replace(/[^\d.]/g, ""))} placeholder="e.g. 3 or 2.5" required />
+              )}
             </div>
             <MoneyField label="Rate (optional)" value={f.rate} onChange={set("rate")}
               hint={person ? (ownRate ? `${person.name} has their own rate of ${formatKobo(ownRate)} per hour.` : grade?.overtime_rate ? `${grade.name}: ${formatKobo(grade.overtime_rate)} per ${grade.overtime_basis}. Leave empty to use it.` : "No grade rate set: type a rate, or set one under Staff grades.") : "Choose an employee first."} />

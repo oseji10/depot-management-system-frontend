@@ -12,6 +12,7 @@ type Data = {
   settings: Settings; last_sent: string | null; recipients: string[]; pdf_ready: boolean; timezone: string;
   roles: { id: number; name: string }[]; users: { id: number; name: string; email: string }[];
 };
+type DryRun = { due: boolean; reason: string; now: string; timezone: string; report_date: string; recipients: string[]; pdf: { bytes: number; seconds: number } | null; summary: Record<string, string> };
 const today = () => new Date().toISOString().slice(0, 10);
 const box = "rounded-2xl border border-line bg-surface p-5 shadow-sm";
 
@@ -34,6 +35,7 @@ export default function DailyReportPage() {
     mutationFn: () => api<Data>("/reports/daily/settings", { method: "PUT", body: body() }),
     onSuccess: (d) => { qc.setQueryData(["daily-report"], d); setNote("Saved."); },
   });
+  const dry = useMutation({ mutationFn: () => api<DryRun>(`/reports/daily/dry-run?date=${date}`) });
   const send = useMutation({
     mutationFn: (onlyMe: boolean) => api<{ sent_to: string[] }>("/reports/daily/send", { method: "POST", body: { date, only_me: onlyMe } }),
     onSuccess: (r) => setNote(`Report for ${formatDate(date)} sent to ${r.sent_to.join(", ")}.`),
@@ -121,11 +123,24 @@ export default function DailyReportPage() {
           <h2 className="mb-3 text-base font-semibold">See or send a report now</h2>
           <div className="flex flex-wrap items-end gap-3">
             <Field label="Day" type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} />
+            <Button variant="secondary" busy={dry.isPending} onClick={() => dry.mutate()}>Dry run</Button>
             <Button variant="secondary" busy={pdfBusy} onClick={openPdf}>Open the report</Button>
             <Button variant="secondary" busy={send.isPending && send.variables === true} onClick={() => { setNote(null); send.mutate(true); }}>Email it to me</Button>
             <Button busy={send.isPending && send.variables === false} onClick={() => { if (window.confirm("Email this report to everyone on the list now?")) { setNote(null); send.mutate(false); } }}>Email it to everyone</Button>
           </div>
-          <p className="mt-2 text-xs text-ink-soft">Sending from here does not stop tonight&apos;s automatic email.</p>
+          <p className="mt-2 text-xs text-ink-soft">Dry run builds everything and shows what would happen, without emailing anyone. Sending from here does not stop tonight&apos;s automatic email.</p>
+          {dry.error && <div className="mt-3"><ErrorNote>{(dry.error as Error).message}</ErrorNote></div>}
+          {dry.data && (
+            <div className="mt-4 rounded-xl border border-line bg-paper p-4 text-sm">
+              <p className="font-semibold">Dry run for {formatDate(dry.data.report_date)} · nothing was sent</p>
+              <p className={`mt-1 ${dry.data.due ? "text-[#127a3a]" : "text-ink-soft"}`}>Automatic sending: {dry.data.reason}</p>
+              <p className="mt-1"><span className="font-medium">Would go to ({dry.data.recipients.length}):</span> {dry.data.recipients.length ? dry.data.recipients.join(", ") : "nobody yet. Add people above and save."}</p>
+              <p className="mt-1">{dry.data.pdf ? `PDF built fine (${Math.round(dry.data.pdf.bytes / 1024)} KB in ${dry.data.pdf.seconds}s).` : "No PDF: the PDF library is not installed on the server, so the email would carry the summary only."}</p>
+              <dl className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                {Object.entries(dry.data.summary).map(([k, v]) => <div key={k} className="flex justify-between border-b border-line py-1"><dt className="text-ink-soft">{k}</dt><dd className="font-semibold">{v}</dd></div>)}
+              </dl>
+            </div>
+          )}
         </section>
       </div>
     </div>
