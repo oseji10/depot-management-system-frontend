@@ -111,12 +111,14 @@ export type RebateCategory = {
   products_count?: number;
 };
 
-export type Unit = { id: number; name: string; abbreviation: string; usual_size?: number | null; products_count?: number };
+export type Unit = { id: number; name: string; abbreviation: string; value?: string | null; usual_size?: number | null; products_count?: number };
 
 export type ProductUnit = {
   id: number;
   unit_id: number;
   factor: number;
+  /** The quantity as typed on the product form (older products: empty). */
+  quantity?: number | null;
   barcode: string | null;
   is_base: boolean;
   is_active: boolean;

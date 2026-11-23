@@ -4,7 +4,7 @@ import { Logo } from "./logo";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSession } from "../hooks/session";
 import { api } from "../lib/api";
 import { getBranchId, setStoreId, signOutLocally } from "../lib/auth";
@@ -175,7 +175,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
         { href: "/employees", label: "Employees", icon: "users", show: !isRep && s.can("employees.view") },
         { href: "/payroll", label: "Payroll", icon: "calc", show: !isRep && s.can("payroll.view") },
         { href: "/payroll/schedule", label: "Salary schedule", icon: "calc", show: !isRep && s.can("payroll.view") },
-        { href: "/overtime", label: "Overtime", icon: "discrepancy", show: !isRep && s.can("employees.view") },
+        { href: "/overtime", label: "Overtime", icon: "discrepancy", show: !isRep && s.can("overtime.view") },
         { href: "/staff-grades", label: "Staff grades", icon: "discrepancy", show: !isRep && s.can("employees.view") },
         { href: "/staff-charges", label: "Staff charges", icon: "discrepancy", show: !isRep && s.can("staff-charges.view") },
       ],
@@ -243,8 +243,19 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
   const scopeLabel =
     s.level === "platform" ? "Platform admin" : s.level === "store" ? "All branches" : (s.branches?.find((b) => String(b.id) === getBranchId())?.name ?? s.branch?.name ?? "Branch");
 
+  // Everything that is not the menu: business and branch pickers, New sale, alerts, who is signed in, sign out.
+  // On a computer it sits in the top bar; on a phone it sits at the bottom of the slide-out menu.
+  const switchers = (
+    <>
+      {s.isPlatform && <StoreSwitcher activeStoreId={activeStoreId} />}
+      {!s.isPlatform && !isRep && <BusinessSwitcher />}
+      {!isRep && <ScopeSwitcher />}
+    </>
+  );
+  const newSale = s.can("sales.create") && pathname !== "/pos";
+
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[19rem_1fr] print:block">
+    <div className="min-h-dvh lg:grid lg:grid-cols-[16rem_1fr] print:block">
       {/* Mobile top bar */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/10 bg-[#c40008]/95 px-4 py-3 text-white backdrop-blur lg:hidden print:hidden">
         <button
@@ -276,46 +287,24 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
       )}
 
       <aside
-        className={`print:hidden fixed inset-y-0 left-0 z-50 flex w-[19rem] max-w-[85vw] flex-col overflow-hidden bg-gradient-to-b from-[#ff3b3f] to-[#a50006] text-white shadow-2xl transition-transform duration-300 lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0 lg:shadow-none ${
+        className={`print:hidden fixed inset-y-0 left-0 z-50 flex w-[19rem] max-w-[85vw] flex-col overflow-hidden bg-gradient-to-b from-[#ff3b3f] to-[#a50006] text-white shadow-2xl transition-transform duration-300 lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:translate-x-0 lg:shadow-none ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Ambient glow */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -left-16 size-64 rounded-full bg-white/20 blur-3xl"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/15 to-transparent"
-        />
+        <div aria-hidden="true" className="pointer-events-none absolute -top-24 -left-16 size-64 rounded-full bg-white/20 blur-3xl" />
 
-        {/* Brand */}
-        <div className="relative px-4 pt-5">
-          <div className="grid place-items-center rounded-2xl bg-white px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-white/40">
+        {/* Logo */}
+        <div className="relative px-4 pt-5 pb-2">
+          <Link href="/" onClick={() => setOpen(false)} className="grid place-items-center rounded-2xl bg-white px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-white/40">
             <Logo className="h-10" />
-          </div>
-        </div>
-        <div className="relative flex items-center gap-3 px-5 pt-4 pb-4">
-          {logo && <BrandMark logo={logo} className="size-10 rounded-xl text-lg shadow-lg shadow-black/20 ring-1 ring-white/40" />}
-          <div className="min-w-0">
-            <p className="truncate text-[15px] leading-tight font-bold tracking-tight">{s.store?.name ?? APP_NAME}</p>
-            <p className="truncate text-xs text-white/90">{s.store ? "Depot Management System" : "All stores"}</p>
-          </div>
-          <NotificationBell className="ml-auto hidden lg:block" />
+          </Link>
         </div>
 
-        {s.isPlatform && <StoreSwitcher activeStoreId={activeStoreId} />}
-        {!s.isPlatform && !isRep && <BusinessSwitcher />}
-        {!isRep && <ScopeSwitcher />}
-
-        {s.can("sales.create") && pathname !== "/pos" && (
-          <div className="relative px-4 pb-1">
-            <Link
-              href="/pos"
-              onClick={() => setOpen(false)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#a50006] shadow-lg shadow-black/15 transition hover:bg-[#fff3f3] active:scale-[0.98]"
-            >
+        {/* Phone only: the business and branch pickers (on a computer they are in the top bar) */}
+        <div className="relative pt-2 lg:hidden">{switchers}</div>
+        {newSale && (
+          <div className="relative px-4 pb-1 lg:hidden">
+            <Link href="/pos" onClick={() => setOpen(false)} className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#a50006] shadow-lg shadow-black/15">
               <Icon name="pos" /> New sale
             </Link>
           </div>
@@ -343,7 +332,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
                         href={n.href}
                         onClick={() => setOpen(false)}
                         aria-current={active ? "page" : undefined}
-                        className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                        className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors ${
                           active
                             ? "bg-gradient-to-r from-white/25 via-white/10 to-transparent font-semibold text-white"
                             : "font-medium text-white hover:bg-white/15"
@@ -352,12 +341,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
                         {active && (
                           <span className="absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r-full bg-white shadow-[0_0_12px_2px_rgb(255_255_255/0.55)]" />
                         )}
-                        <Icon
-                          name={n.icon}
-                          className={`size-[18px] shrink-0 transition-colors ${
-                            active ? "text-white" : "text-white group-hover:text-white"
-                          }`}
-                        />
+                        <Icon name={n.icon} className="size-[18px] shrink-0 text-white" />
                         <span className="truncate">{n.label}</span>
                       </Link>
                     );
@@ -368,38 +352,79 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
           })}
         </nav>
 
-        {isRep && <div className="relative px-4 pb-1"><SyncChip /></div>}
-
-        {/* Who is signed in: just the name and role */}
-        <div className="relative px-3">
-          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3 backdrop-blur">
-            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-white/25 to-white/5 text-xs font-bold ring-1 ring-white/20">
-              {initials(s.user.name)}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">{s.user.name}</p>
-              <p className="truncate text-xs text-white/90">
-                {s.roles[0] ?? (s.isPlatform ? "Super admin" : "No role")} · {scopeLabel}
-              </p>
-              <Link href="/access" onClick={() => setOpen(false)} className="text-[11px] text-white/80 underline-offset-2 hover:underline">Why can&apos;t I see a menu?</Link>
-            </div>
+        {/* Phone only: who is signed in and sign out */}
+        <div className="relative space-y-2 p-3 lg:hidden">
+          {isRep && <SyncChip />}
+          <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
+            <p className="truncate text-sm font-semibold">{s.user.name}</p>
+            <p className="truncate text-xs text-white/90">{s.roles[0] ?? (s.isPlatform ? "Super admin" : "No role")} · {scopeLabel}</p>
+            <Link href="/access" onClick={() => setOpen(false)} className="text-[11px] text-white/80 hover:underline">Why can&apos;t I see a menu?</Link>
           </div>
-        </div>
-
-        {/* Sign out: its own big button */}
-        <div className="relative p-3 pt-2">
-          <button
-            onClick={logout}
-            className="group flex min-h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#ff8a3d] via-[#ff5e62] to-[#f40009] px-4 text-[15px] font-extrabold tracking-wide text-white shadow-lg shadow-[#f40009]/30 ring-1 ring-white/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-[#f40009]/40 active:translate-y-0 active:scale-[0.98]"
-          >
-            <Icon name="logout" className="size-5 transition-transform group-hover:translate-x-0.5" />
-            Sign out
+          <button onClick={logout} className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-white/95 px-4 text-[15px] font-extrabold text-[#a50006]">
+            <Icon name="logout" className="size-5" /> Sign out
           </button>
         </div>
       </aside>
 
-      <NotificationToasts />
-      <main className={`min-w-0 px-4 py-6 sm:px-8 sm:py-8 ${wide ? "lg:px-5 lg:py-5" : ""}`}><div className={`mx-auto ${wide ? "max-w-none" : "max-w-6xl"}`}><SubscriptionBanner />{s.subscription?.mode === "blocked" && !s.isPlatform && pathname !== "/subscription/" && pathname !== "/subscription" ? <SubscriptionGate /> : children}</div></main>
+      <div className="min-w-0">
+        {/* Computer: top bar with the business, pickers, New sale, alerts and the signed-in person */}
+        <header className="sticky top-0 z-30 hidden items-center gap-3 bg-gradient-to-r from-[#c40008] to-[#ff3b3f] px-5 py-2.5 text-white shadow-md lg:flex print:hidden">
+          <div className="flex min-w-0 items-center gap-2.5">
+            {logo && <BrandMark logo={logo} className="size-9 rounded-lg text-sm ring-1 ring-white/40" />}
+            <div className="min-w-0">
+              <p className="max-w-[16rem] truncate text-sm leading-tight font-bold">{s.store?.name ?? APP_NAME}</p>
+              <p className="truncate text-[11px] text-white/85">{scopeLabel}</p>
+            </div>
+          </div>
+          <div className="flex min-w-0 flex-1 items-center gap-2 [&>div]:px-0 [&>div]:pb-0 [&>div]:flex [&>div]:items-center [&>div]:gap-2 [&>div]:space-y-0 [&_label]:sr-only [&_select]:min-w-40 [&_select]:py-1.5">
+            {switchers}
+          </div>
+          {isRep && <SyncChip compact />}
+          {newSale && (
+            <Link href="/pos" className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold whitespace-nowrap text-[#a50006] shadow-sm transition hover:bg-[#fff3f3]">
+              <Icon name="pos" /> New sale
+            </Link>
+          )}
+          <NotificationBell />
+          <UserMenu name={s.user.name} detail={`${s.roles[0] ?? (s.isPlatform ? "Super admin" : "No role")} · ${scopeLabel}`} onLogout={logout} />
+        </header>
+        <NotificationToasts />
+        <main className={`min-w-0 px-4 py-6 sm:px-8 sm:py-8 ${wide ? "lg:px-5 lg:py-5" : ""}`}><div className={`mx-auto ${wide ? "max-w-none" : "max-w-6xl"}`}><SubscriptionBanner />{s.subscription?.mode === "blocked" && !s.isPlatform && pathname !== "/subscription/" && pathname !== "/subscription" ? <SubscriptionGate /> : children}</div></main>
+      </div>
+    </div>
+  );
+}
+
+/** The signed-in person in the top bar: their name, and a small menu with access help and sign out. */
+function UserMenu({ name, detail, onLogout }: { name: string; detail: string; onLogout: () => void }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", away);
+    return () => document.removeEventListener("mousedown", away);
+  }, [open]);
+
+  return (
+    <div ref={box} className="relative">
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex items-center gap-2 rounded-xl bg-white/15 py-1 pr-2.5 pl-1 ring-1 ring-white/25 transition hover:bg-white/25">
+        <span className="grid size-8 place-items-center rounded-lg bg-white text-xs font-bold text-[#a50006]">{initials(name)}</span>
+        <span className="max-w-[9rem] truncate text-sm font-semibold">{name}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-4" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <div className="absolute top-full right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-line bg-surface text-ink shadow-2xl">
+          <div className="border-b border-line px-4 py-3">
+            <p className="truncate font-semibold">{name}</p>
+            <p className="truncate text-xs text-ink-soft">{detail}</p>
+          </div>
+          <Link href="/access" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm hover:bg-paper">Why can&apos;t I see a menu?</Link>
+          <button type="button" onClick={onLogout} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-[#c23a3a] hover:bg-paper">
+            <Icon name="logout" className="size-4" /> Sign out
+          </button>
+        </div>
+      )}
     </div>
   );
 }

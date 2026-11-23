@@ -42,3 +42,13 @@ export async function readSheet(file: File, columns: SheetColumn[]): Promise<Par
 
   return { rows, missing, found: rows.length };
 }
+
+/** An Excel file with the right column headings (and example rows) for an upload. */
+export async function downloadTemplate(filename: string, headings: string[], examples: (string | number)[][] = []) {
+  const XLSX = await import("xlsx");
+  const sheet = XLSX.utils.aoa_to_sheet([headings, ...examples]);
+  sheet["!cols"] = headings.map((h) => ({ wch: Math.max(14, h.length + 4) }));
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, "Products");
+  XLSX.writeFile(book, filename);
+}

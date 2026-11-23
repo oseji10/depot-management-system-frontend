@@ -39,7 +39,7 @@ export const NAV_RULES: NavRule[] = [
   { href: "/employees", label: "Employees", perm: "employees.view", notRep: true },
   { href: "/payroll", label: "Payroll", perm: "payroll.view", notRep: true },
   { href: "/payroll/schedule", label: "Salary schedule", perm: "payroll.view", notRep: true },
-  { href: "/overtime", label: "Overtime", perm: "employees.view", notRep: true },
+  { href: "/overtime", label: "Overtime", perm: "overtime.view", notRep: true },
   { href: "/staff-grades", label: "Staff grades", perm: "employees.view", notRep: true },
   { href: "/staff-charges", label: "Staff charges", perm: "staff-charges.view", notRep: true },
   { href: "/pos-terminals", label: "Card terminals", perm: "terminals.view", notRep: true },

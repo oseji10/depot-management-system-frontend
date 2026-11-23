@@ -315,7 +315,7 @@ export function FieldPos() {
         )}
       </section>
 
-      <aside id="cart" aria-label="Current sale" className="mb-20 flex flex-col rounded-3xl border border-line bg-surface shadow-lg shadow-black/5 lg:sticky lg:top-3 lg:mb-0 lg:h-[calc(100dvh-1.5rem)] lg:overflow-hidden">
+      <aside id="cart" aria-label="Current sale" className="mb-20 flex flex-col rounded-3xl border border-line bg-surface shadow-lg shadow-black/5 lg:sticky lg:top-[4.5rem] lg:mb-0 lg:h-[calc(100dvh-5.25rem)] lg:overflow-hidden">
         <div className="space-y-3 border-b border-line p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold tracking-tight">Current sale {items > 0 && <span className="ml-1 text-sm font-medium text-ink-soft">· {items} item{items === 1 ? "" : "s"}</span>}</h2>

@@ -28,10 +28,10 @@ export default function OvertimePage() {
   const [editing, setEditing] = useState<OvertimeEntry | "overtime" | "sunday" | null>(null);
   const [kind, setKind] = useState("");
   const [picked, setPicked] = useState<number[]>([]);
-  const canManage = s.can("employees.manage");
-  const canApprove = s.can("payroll.approve");
+  const canManage = s.can("overtime.manage");
+  const canApprove = s.can("overtime.approve");
 
-  const employees = useQuery({ queryKey: ["employees-all"], queryFn: async () => (await api<Paginated<Employee>>("/employees?per_page=100")).data });
+  const employees = useQuery({ queryKey: ["overtime-people"], queryFn: async () => (await api<{ data: Employee[] }>("/overtime/people")).data });
   const qs = new URLSearchParams({ per_page: "100", ...(status && { status }), ...(kind && { kind }), ...(employee && { employee_id: employee }), ...(from && { from }), ...(to && { to }) });
   const list = useQuery({ queryKey: ["overtime", qs.toString()], queryFn: () => api<Paginated<OvertimeEntry> & { totals: Totals }>(`/overtime?${qs}`) });
   const refresh = () => { setPicked([]); return qc.invalidateQueries({ queryKey: ["overtime"] }); };

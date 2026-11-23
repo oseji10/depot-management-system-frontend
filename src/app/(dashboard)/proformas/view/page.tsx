@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DeleteButton } from "../../../../components/delete-button";
-import { PrintSheet } from "../../../../components/print-sheet";
+import { ProformaDocument } from "../../../../components/proforma-document";
 import { withSuspense } from "../../../../components/suspense-page";
-import { Badge, Button, Modal, SelectField } from "../../../../components/ui";
+import { Badge, Button, ICON, Modal, SelectField, Svg } from "../../../../components/ui";
 import { WhatsAppButton } from "../../../../components/whatsapp-button";
 import { useIdParam } from "../../../../hooks/id-param";
 import { useSession } from "../../../../hooks/session";
@@ -52,7 +52,6 @@ function ProformaPage() {
 
   const manage = s.can("proformas.manage");
   const open = ["draft", "sent", "accepted"].includes(p.status);
-  const th = "py-2 text-xs font-semibold uppercase tracking-wide text-ink-soft";
 
   const actions = (
     <>
@@ -63,62 +62,20 @@ function ProformaPage() {
 
   return (
     <>
-      <PrintSheet
-        back={{ href: "/proformas", label: "Proforma invoices" }}
-        title="Proforma invoice"
-        subtitle={<><p className="font-mono font-bold">{p.number}</p>{p.valid_until && <p>Valid until {formatDate(p.valid_until)}</p>}</>}
-        actions={actions}
-      >
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Prepared for</p>
-            <p className="font-semibold">{p.customer_name}</p>
-            {p.customer_address && <p>{p.customer_address}</p>}
-            {p.customer_phone && <p>{p.customer_phone}</p>}
-            {p.customer_email && <p>{p.customer_email}</p>}
-          </div>
-          <div className="print:hidden">
-            <Badge tone={PROFORMA_TONE[p.status]}>{PROFORMA_LABEL[p.status]}</Badge>
-            {p.is_expired && <span className="ml-1"><Badge tone="warn">Expired</Badge></span>}
-            {p.converted_sale_id && <p className="mt-1 text-xs"><Link href={`/sales/view?id=${p.converted_sale_id}`} className="font-semibold text-[#f40009] hover:underline">Open the sale →</Link></p>}
-          </div>
+      <div className="mx-auto mb-5 flex max-w-4xl flex-wrap items-center justify-between gap-2 print:hidden">
+        <Link href="/proformas" className="text-sm font-semibold text-[#f40009] hover:underline">← Proforma invoices</Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={PROFORMA_TONE[p.status]}>{PROFORMA_LABEL[p.status]}</Badge>
+          {p.is_expired && <Badge tone="warn">Expired</Badge>}
+          {p.converted_sale_id && <Link href={`/sales/view?id=${p.converted_sale_id}`} className="text-sm font-semibold text-[#f40009] hover:underline">Open the sale →</Link>}
+          {actions}
+          <Button onClick={() => window.print()}><Svg d={ICON.print} /> Print</Button>
         </div>
-
-        <table className="w-full text-left">
-          <thead className="border-b border-line">
-            <tr><th className={th}>Item</th><th className={`${th} text-right`}>Qty</th><th className={`${th} text-right`}>Price</th><th className={`${th} text-right`}>Amount</th></tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {p.lines?.map((l) => (
-              <tr key={l.id}>
-                <td className="py-2 pr-2">{l.description}</td>
-                <td className="py-2 text-right">{l.quantity}</td>
-                <td className="py-2 text-right">{formatKobo(l.unit_price)}</td>
-                <td className="py-2 text-right font-medium">{formatKobo(l.line_total)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <dl className="mt-4 ml-auto w-full max-w-xs space-y-1">
-          <div className="flex justify-between"><dt>Goods</dt><dd>{formatKobo(p.subtotal)}</dd></div>
-          {p.discount > 0 && <div className="flex justify-between"><dt>Discount</dt><dd>−{formatKobo(p.discount)}</dd></div>}
-          {p.delivery_fee > 0 && <div className="flex justify-between"><dt>Delivery</dt><dd>{formatKobo(p.delivery_fee)}</dd></div>}
-          <div className="flex justify-between border-t border-line pt-1 text-base font-bold"><dt>Total</dt><dd>{formatKobo(p.total)}</dd></div>
-        </dl>
-
-        {p.notes && <p className="mt-5 whitespace-pre-line">{p.notes}</p>}
-        {p.terms && (
-          <div className="mt-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Terms</p>
-            <p className="whitespace-pre-line">{p.terms}</p>
-          </div>
-        )}
-        <p className="mt-6 text-xs text-ink-soft">This is a quotation, not a receipt. Prices and availability are subject to change after the validity date.</p>
-      </PrintSheet>
+      </div>
+      <ProformaDocument p={p} />
 
       {manage && (
-        <div className="mx-auto mt-5 flex max-w-3xl flex-wrap items-center gap-2 print:hidden">
+        <div className="mx-auto mt-5 flex max-w-4xl flex-wrap items-center gap-2 print:hidden">
           {p.status === "draft" && <Button variant="secondary" busy={setStatus.isPending} onClick={() => setStatus.mutate("sent")}>Mark as sent</Button>}
           {p.status === "sent" && <Button variant="secondary" busy={setStatus.isPending} onClick={() => setStatus.mutate("accepted")}>Customer accepted</Button>}
           {open && s.can("sales.create") && <Button onClick={() => setConverting(true)}>Convert to sale</Button>}

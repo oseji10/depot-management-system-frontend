@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BusinessHeader } from "../../../../components/business-header";
 import { withSuspense } from "../../../../components/suspense-page";
 import { Badge, Button, ErrorNote, ICON, Modal, PageHeader, SelectField, Stat, Svg, TableCard, TableEmpty, TableError, TableLoading, theadClass, thClass } from "../../../../components/ui";
@@ -14,6 +14,29 @@ import { formatAmount, formatKobo } from "../../../../lib/format";
 import { RUN_LABEL, RUN_TONE, monthLabel } from "../../../../lib/payroll";
 import { bankCsv, download, fullCsv, scheduleRows } from "../../../../lib/schedule";
 import type { Paginated, PayrollRun, Payslip, Session } from "../../../../lib/types";
+
+type Row = ReturnType<typeof scheduleRows>[number];
+type MoneyKey = "basic" | "rewards" | "other_earnings" | "deductions" | "net";
+type Col = { key: string; label: string; width: number; money?: MoneyKey; cell: (x: Row) => ReactNode; text: (x: Row) => string };
+const dash = (n: number, neg = false) => (n ? `${neg ? "−" : ""}${formatAmount(n)}` : "–");
+
+/** Every column the schedule can show. Pick any of them to print or download (e.g. only name and net pay for the bank). */
+const COLUMNS: Col[] = [
+  { key: "employee", label: "Employee", width: 20, cell: (x) => <><p className="font-medium text-[#f40009] print:text-black">{x.name}</p><p className="text-xs text-ink-soft">{x.staff_no}</p></>, text: (x) => `${x.name} (${x.staff_no})` },
+  { key: "bank", label: "Bank", width: 14, cell: (x) => <>{x.bank_name ?? <Badge tone="warn">No bank</Badge>}{x.bank_name && !x.bank_code && <span className="block text-[11px] text-ink-soft print:hidden">bank code not found</span>}</>, text: (x) => x.bank_name ?? "-" },
+  { key: "account", label: "Account", width: 18, cell: (x) => <><p className="font-mono text-xs">{x.account_number ?? "–"}</p><p className="text-xs text-ink-soft">{x.account_name}</p></>, text: (x) => [x.account_number, x.account_name].filter(Boolean).join(" ") || "-" },
+  { key: "basic", label: "Basic", width: 10, money: "basic", cell: (x) => formatAmount(x.basic), text: (x) => formatAmount(x.basic) },
+  { key: "rewards", label: "Sales reward", width: 10, money: "rewards", cell: (x) => dash(x.rewards), text: (x) => (x.rewards ? formatAmount(x.rewards) : "-") },
+  { key: "other", label: "Other", width: 9, money: "other_earnings", cell: (x) => dash(x.other_earnings), text: (x) => (x.other_earnings ? formatAmount(x.other_earnings) : "-") },
+  { key: "deductions", label: "Deductions", width: 10, money: "deductions", cell: (x) => dash(x.deductions, true), text: (x) => (x.deductions ? `-${formatAmount(x.deductions)}` : "-") },
+  { key: "net", label: "Net pay", width: 11, money: "net", cell: (x) => <span className="font-semibold">{formatAmount(x.net)}</span>, text: (x) => formatAmount(x.net) },
+];
+const PRESETS: { label: string; keys: string[] }[] = [
+  { label: "Everything", keys: COLUMNS.map((c) => c.key) },
+  { label: "For the bank", keys: ["employee", "bank", "account", "net"] },
+  { label: "Name and net pay", keys: ["employee", "net"] },
+];
+const COLS_KEY = "depot.salary-schedule.columns";
 
 /** The salary schedule: who is paid what and where, ready to print or to upload to a bank or payment platform. ?id=<run> picks the run. */
 function SchedulePage() {
@@ -28,6 +51,20 @@ function SchedulePage() {
   const id = (runs.data && !known ? "" : chosen) || String(usable.find((r) => r.status === "approved")?.id ?? usable[0]?.id ?? "");
   const run = useQuery({ queryKey: ["payroll-run", id], enabled: !!id, queryFn: () => api<PayrollRun>(`/payroll-runs/${id}`) });
   const r = run.data;
+  const [colKeys, setColKeys] = useState<string[]>(COLUMNS.map((c) => c.key));
+  // The last choice is remembered on this device.
+  useEffect(() => {
+    try { const v = JSON.parse(localStorage.getItem(COLS_KEY) ?? "null"); if (Array.isArray(v) && v.length) setColKeys(v); } catch { /* first visit */ }
+  }, []);
+  const chooseCols = (keys: string[]) => {
+    const next = COLUMNS.map((c) => c.key).filter((k) => keys.includes(k));
+    if (!next.length) return;
+    setColKeys(next);
+    try { localStorage.setItem(COLS_KEY, JSON.stringify(next)); } catch { /* private mode */ }
+  };
+  const cols = COLUMNS.filter((c) => colKeys.includes(c.key));
+  const firstMoney = cols.findIndex((c) => c.money);
+  const lead = firstMoney === -1 ? cols.length : firstMoney;
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfNote, setPdfNote] = useState<string | null>(null);
   /** Uses the business details as the server holds them right now, not the copy cached on this device. */
@@ -43,10 +80,10 @@ function SchedulePage() {
       else if (logo && !jpeg) setPdfNote("The logo could not be read, so it was left off the PDF. Try uploading it again as PNG or JPEG.");
       downloadBlob(`salary-schedule-${r.period}.pdf`, tablePdf({
         title: `Salary schedule - ${monthLabel(r.period)}`, subtitle: `${r.number} - ${RUN_LABEL[r.status]} - ${rows.length} staff`,
-        head: ["Employee", "Bank", "Account", "Basic", "Sales reward", "Other", "Deductions", "Net pay"],
-        widths: [20, 14, 18, 10, 10, 9, 10, 11], right: [false, false, false, true, true, true, true, true],
-        rows: rows.map((x) => [`${x.name} (${x.staff_no})`, x.bank_name ?? "-", x.account_number ?? "-", formatAmount(x.basic), x.rewards ? formatAmount(x.rewards) : "-", x.other_earnings ? formatAmount(x.other_earnings) : "-", x.deductions ? `-${formatAmount(x.deductions)}` : "-", formatAmount(x.net)]),
-        foot: ["Total", "", "", formatAmount(sum("basic")), formatAmount(sum("rewards")), formatAmount(sum("other_earnings")), `-${formatAmount(sum("deductions"))}`, formatAmount(sum("net"))],
+        head: cols.map((c) => c.label),
+        widths: cols.map((c) => Math.round((c.width / cols.reduce((n, x) => n + x.width, 0)) * 102)), right: cols.map((c) => !!c.money),
+        rows: rows.map((x) => cols.map((c) => c.text(x))),
+        foot: cols.map((c, i) => (c.money ? (c.money === "deductions" ? `-${formatAmount(sum(c.money))}` : formatAmount(sum(c.money))) : i === 0 ? "Total" : "")),
       }, { name: st?.name ?? "", lines: [st?.address, st?.phone && `Tel: ${st.phone}`, st?.email && `Email: ${st.email}`].filter(Boolean) as string[] }, jpeg));
     } catch (e) { setPdfNote((e as Error).message); } finally { setPdfBusy(false); }
   };
@@ -108,35 +145,44 @@ function SchedulePage() {
         </>
       )}
 
-      <TableCard min="60rem">
+      <div className="mb-3 rounded-2xl border border-line bg-surface p-3 text-sm shadow-sm print:hidden">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium">Columns to show, print and download:</span>
+          {PRESETS.map((pr) => (
+            <button key={pr.label} type="button" onClick={() => chooseCols(pr.keys)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${pr.keys.join() === colKeys.join() ? "border-[#f40009] bg-[#fff1f1] text-[#f40009]" : "border-line bg-white hover:bg-paper"}`}>{pr.label}</button>
+          ))}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+          {COLUMNS.map((c) => (
+            <label key={c.key} className="inline-flex items-center gap-1.5">
+              <input type="checkbox" className="size-4 accent-[#f40009]" checked={colKeys.includes(c.key)} disabled={colKeys.length === 1 && colKeys.includes(c.key)}
+                onChange={() => chooseCols(colKeys.includes(c.key) ? colKeys.filter((k) => k !== c.key) : [...colKeys, c.key])} />
+              {c.label}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <TableCard min={cols.length > 4 ? "60rem" : "30rem"}>
         <thead className={theadClass}>
-          <tr>
-            <th className={thClass}>Employee</th><th className={thClass}>Bank</th><th className={thClass}>Account</th>
-            <th className={`${thClass} text-right`}>Basic</th><th className={`${thClass} text-right`}>Sales reward</th><th className={`${thClass} text-right`}>Other</th>
-            <th className={`${thClass} text-right`}>Deductions</th><th className={`${thClass} text-right`}>Net pay</th>
-          </tr>
+          <tr>{cols.map((c) => <th key={c.key} className={`${thClass} ${c.money ? "text-right" : ""}`}>{c.label}</th>)}</tr>
         </thead>
         <tbody className="divide-y divide-line">
-          {(runs.isLoading || run.isLoading) && <TableLoading cols={8} />}
-          {run.error && <TableError cols={8} message={(run.error as Error).message} />}
-          {r && rows.length === 0 && <TableEmpty cols={8} title="No payslips in this run" />}
+          {(runs.isLoading || run.isLoading) && <TableLoading cols={cols.length} />}
+          {run.error && <TableError cols={cols.length} message={(run.error as Error).message} />}
+          {r && rows.length === 0 && <TableEmpty cols={cols.length} title="No payslips in this run" />}
           {rows.map((x) => (
             <tr key={x.id} onClick={() => setViewing((r?.payslips ?? []).find((p) => p.id === x.id) ?? null)} className="cursor-pointer hover:bg-paper">
-              <td className="px-4 py-3"><p className="font-medium text-[#f40009]">{x.name}</p><p className="text-xs text-ink-soft">{x.staff_no}</p></td>
-              <td className="px-4 py-3">{x.bank_name ?? <Badge tone="warn">No bank</Badge>}{x.bank_name && !x.bank_code && <span className="block text-[11px] text-ink-soft print:hidden">bank code not found</span>}</td>
-              <td className="px-4 py-3"><p className="font-mono text-xs">{x.account_number ?? "–"}</p><p className="text-xs text-ink-soft">{x.account_name}</p></td>
-              <td className="px-4 py-3 text-right tabular-nums">{formatAmount(x.basic)}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{x.rewards ? formatAmount(x.rewards) : "–"}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{x.other_earnings ? formatAmount(x.other_earnings) : "–"}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{x.deductions ? `−${formatAmount(x.deductions)}` : "–"}</td>
-              <td className="px-4 py-3 text-right font-semibold tabular-nums">{formatAmount(x.net)}</td>
+              {cols.map((c) => <td key={c.key} className={`px-4 py-3 ${c.money ? "text-right tabular-nums" : ""}`}>{c.cell(x)}</td>)}
             </tr>
           ))}
           {rows.length > 0 && (
             <tr className="bg-paper font-semibold">
-              <td className="px-4 py-3" colSpan={3}>Total</td>
-              <td className="px-4 py-3 text-right tabular-nums">{formatAmount(sum("basic"))}</td><td className="px-4 py-3 text-right tabular-nums">{formatAmount(sum("rewards"))}</td><td className="px-4 py-3 text-right tabular-nums">{formatAmount(sum("other_earnings"))}</td>
-              <td className="px-4 py-3 text-right tabular-nums">−{formatAmount(sum("deductions"))}</td><td className="px-4 py-3 text-right tabular-nums">{formatAmount(sum("net"))}</td>
+              {lead > 0 && <td className="px-4 py-3" colSpan={lead}>Total</td>}
+              {cols.slice(lead).map((c) => (
+                <td key={c.key} className={`px-4 py-3 ${c.money ? "text-right tabular-nums" : ""}`}>{c.money ? `${c.money === "deductions" ? "−" : ""}${formatAmount(sum(c.money))}` : ""}</td>
+              ))}
             </tr>
           )}
         </tbody>

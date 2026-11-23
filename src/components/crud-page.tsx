@@ -32,6 +32,8 @@ type Props<T extends { id: number }> = {
   columns: Column<T>[];
   fields: FieldDef[];
   canCreate?: boolean;
+  /** Replaces the usual "Add" button, e.g. to open a page's own form. */
+  createAction?: ReactNode;
   canEdit?: boolean;
   /** Show a Delete button when editing a record. The server refuses (with a reason) if the record has been used. */
   canDelete?: boolean;
@@ -81,7 +83,7 @@ export function CrudPage<T extends { id: number }>(p: Props<T>) {
       <PageHeader
         title={p.title}
         description={p.description}
-        action={p.canCreate && <Button onClick={() => setEditing("new")}>Add {p.noun}</Button>}
+        action={p.createAction ?? (p.canCreate && <Button onClick={() => setEditing("new")}>Add {p.noun}</Button>)}
       />
 
       <Toolbar>

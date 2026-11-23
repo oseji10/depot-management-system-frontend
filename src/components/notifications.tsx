@@ -88,7 +88,7 @@ export function NotificationBell({ className = "" }: { className?: string }) {
       </button>
 
       {open && createPortal(
-        <div ref={panel} role="dialog" aria-label="Notifications" className="fixed top-16 right-3 z-[60] w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-line bg-surface text-ink shadow-2xl sm:right-6 lg:top-4 lg:right-auto lg:left-[17rem]">
+        <div ref={panel} role="dialog" aria-label="Notifications" className="fixed top-16 right-3 z-[60] w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-line bg-surface text-ink shadow-2xl sm:right-6 lg:top-[4.25rem] lg:right-6">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <p className="font-bold">Notifications</p>
             {unread > 0 && <button type="button" className="text-xs font-semibold text-[#f40009] hover:underline" onClick={() => mark.mutate({ all: true })}>Mark all as read</button>}

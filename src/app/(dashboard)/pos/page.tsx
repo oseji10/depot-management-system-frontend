@@ -351,7 +351,7 @@ function CounterPos() {
       </section>
 
       {/* ---------- Cart ---------- */}
-      <aside id="cart" aria-label="Current sale" className="mb-20 flex flex-col rounded-3xl border border-line bg-surface shadow-lg shadow-black/5 xl:sticky xl:top-3 xl:mb-0 xl:h-[calc(100dvh-1.5rem)] xl:overflow-hidden">
+      <aside id="cart" aria-label="Current sale" className="mb-20 flex flex-col rounded-3xl border border-line bg-surface shadow-lg shadow-black/5 xl:sticky xl:top-[4.5rem] xl:mb-0 xl:h-[calc(100dvh-5.25rem)] xl:overflow-hidden">
         <div className="space-y-3 border-b border-line p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold tracking-tight">Current sale {items > 0 && <span className="ml-1 text-sm font-medium text-ink-soft">· {items} item{items === 1 ? "" : "s"}</span>}</h2>

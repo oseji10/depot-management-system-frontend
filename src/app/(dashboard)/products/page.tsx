@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BundleBox, ProductTypeCards, VariationsBox, type BundleRow, type ProductKind, type VariationRow } from "../../../components/product-variations";
+import { BundleBox, ProductTypeCards, VariationsBox, planVariations, type BundleRow, type ProductKind, type VariationRow } from "../../../components/product-variations";
 import Link from "next/link";
 import { useDeferredValue, useState } from "react";
 import { ImportProductsButton } from "../../../components/import-buttons";
@@ -112,7 +112,7 @@ export default function ProductsPage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Products"
-        description="Everything you buy and sell. Each product has variations: the smallest one (a bottle or a can) and bigger ones such as a quarter pack, half pack or a crate."
+        description="Everything you buy and sell, and the ways each one is sold (e.g. Full crate, Half crate, Pack)."
         action={<div className="flex flex-wrap gap-2"><Link href="/products/history" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-4 text-sm font-semibold shadow-sm hover:bg-paper">Product history</Link>{canManage && <><ImportProductsButton /><Button onClick={() => setEditing("new")}>Add product</Button></>}</div>}
       />
 
@@ -396,9 +396,13 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
     units: ((b.product as Product | undefined)?.units ?? []).filter((u) => u.is_active).sort((x, y) => x.factor - y.factor).map((u) => ({ unit_id: u.unit_id, name: u.unit?.name ?? "", factor: u.factor }))
       .concat((b.product as Product | undefined)?.units?.some((u) => u.unit_id === b.unit_id) ? [] : [{ unit_id: b.unit_id, name: b.unit?.name ?? "", factor: 1 }]),
   })));
-  const [rows, setRows] = useState<VariationRow[]>(() => product
-    ? [{ name: product.base_unit?.name ?? "", factor: "1", barcode: product.units.find((u) => u.is_base)?.barcode ?? "" }, ...packs]
-    : []);
+  // Each variation with its quantity: as typed, or (older products) how many of the smallest it holds.
+  const [rows, setRows] = useState<VariationRow[]>(() => {
+    if (!product) return [];
+    const active = product.units.filter((u) => u.is_active).sort((a, b) => a.factor - b.factor);
+    const single = active.length <= 1;
+    return active.map((u) => ({ name: u.unit?.name ?? "", qty: u.quantity ? String(u.quantity) : single ? "" : String(u.factor), barcode: u.barcode ?? "" }));
+  });
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [formError, setFormError] = useState<string | null>(null);
   // undefined = unchanged, string = new picture (data URL), null = remove
@@ -424,11 +428,11 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   const containerTypes = useQuery({ queryKey: ["container-types"], queryFn: () => api<{ data: { id: number; name: string; kind: string }[] }>("/container-types") });
   const ofKind = (k: string) => (containerTypes.data?.data ?? []).filter((c) => c.kind === k).map((c) => ({ value: c.id, label: c.name }));
 
-  const baseRow = rows.find((r) => r.factor === "1");
+  const plan = planVariations(rows);
+  const baseRow = plan.base;
   // A regular product has no unit to choose: it keeps the one it has, or a new one is named after its packaging.
   const regularUnit = v.base_unit_name.trim() || ({ rgb: "Bottle", pet: "Plastic bottle", can: "Can" } as Record<string, string>)[v.packaging] || "Piece";
   const baseName = (kind === "bundle" ? (product?.base_unit?.name ?? "Bundle") : kind === "variations" ? baseRow?.name ?? "" : regularUnit).trim();
-  const baseUnitName = baseName ? baseName[0].toUpperCase() + baseName.slice(1) : "Bottle";
 
   const save = useMutation({
     mutationFn: () => {
@@ -452,8 +456,9 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
           ...(isNew ? { is_bundle: true } : {}),
           bundle_items: bundle.map((b) => ({ product_id: b.product_id, unit_id: b.unit_id, quantity: Number(b.quantity) })),
         } : {}),
+        ...(kind === "variations" ? { base_quantity: plan.baseQty } : {}),
         units: kind === "variations"
-          ? rows.filter((r) => r.factor !== "1" && r.name.trim()).map((r) => ({ name: r.name.trim(), factor: Number(r.factor), barcode: r.barcode || null }))
+          ? plan.others
           : [],
       };
       if (isNew || baseName.toLowerCase() !== (product.base_unit?.name ?? "").toLowerCase()) body.base_unit_name = baseName;
@@ -480,7 +485,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
       <form onSubmit={(e) => { e.preventDefault(); setErrors({}); setFormError(null); save.mutate(); }} className="space-y-6">
         <ProductTypeCards value={kind} lockedTo={product ? (product.is_bundle ? "bundle" : "regular") : undefined} onChange={(k) => {
           // Switching keeps what was typed: the regular unit becomes the smallest variation, and back.
-          if (k === "variations" && rows.length === 0 && v.base_unit_name.trim()) setRows([{ name: v.base_unit_name.trim(), factor: "1", barcode: v.barcode }]);
+          if (k === "variations" && rows.length === 0 && v.base_unit_name.trim()) setRows([{ name: v.base_unit_name.trim(), qty: "", barcode: v.barcode }]);
           if (k === "regular" && baseRow) setV((cur) => ({ ...cur, base_unit_name: baseRow.name, barcode: baseRow.barcode }));
           setKind(k);
         }} />
@@ -547,8 +552,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
         {kind === "bundle" && <BundleBox rows={bundle} onChange={setBundle} errors={errors} bundleId={product?.id} />}
         {kind !== "variations" && <Field label="Barcode" value={v.barcode} onChange={text("barcode")} error={errors.barcode?.[0]} />}
 
-        {kind !== "bundle" && <Field label={`${baseUnitName}s in a physical case (for rebates)`} inputMode="numeric" value={v.units_per_case} onChange={text("units_per_case")}
-          error={errors.units_per_case?.[0]} hint={kind === "variations" ? "How Coca-Cola counts volume for rebates. Leave empty to use the biggest variation." : "How Coca-Cola counts volume for rebates."} />}
+
 
         {/* 4 — Options */}
         <section>
@@ -605,7 +609,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
 
         <div className="flex justify-end gap-2 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" busy={save.isPending} disabled={kind === "bundle" ? bundle.length === 0 || bundle.some((b) => !(Number(b.quantity) > 0)) : kind === "variations" ? !baseRow || rows.some((r) => r.factor !== "1" && Number(r.factor) < 2) : !baseName}>{isNew ? "Add product" : "Save changes"}</Button>
+          <Button type="submit" busy={save.isPending} disabled={kind === "bundle" ? bundle.length === 0 || bundle.some((b) => !(Number(b.quantity) > 0)) : kind === "variations" ? !!plan.error : !baseName}>{isNew ? "Add product" : "Save changes"}</Button>
         </div>
       </form>
     </Modal>

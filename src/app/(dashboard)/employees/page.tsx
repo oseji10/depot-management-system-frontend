@@ -34,7 +34,7 @@ export default function EmployeesPage() {
       <div className="mb-3 flex flex-wrap gap-2">
         <SearchBox value={search} onChange={setSearch} placeholder="Search by name or staff number" />
         <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm">
-          <option value="active">Current staff</option><option value="left">Left</option><option value="archived">Archived</option>
+          <option value="active">Current employees</option><option value="left">Former employees</option><option value="archived">Archived</option>
         </select>
       </div>
       <div className="relative overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">
@@ -47,7 +47,7 @@ export default function EmployeesPage() {
               : (list.data?.data.length ?? 0) === 0 ? <TableEmpty cols={5} title="No employees" hint="Add your staff so they can be paid and charged for damages." />
               : list.data!.data.map((e) => (
                 <tr key={e.id}>
-                  <td className="px-4 py-3"><p className="font-medium">{e.name} {e.user && <Badge tone="good">Has login</Badge>} {e.status === "left" && <Badge>Left</Badge>}{e.status === "archived" && <Badge>Archived</Badge>}</p><p className="text-xs text-ink-soft">{e.staff_no}{e.phone ? ` · ${e.phone}` : ""}{e.user?.email ? ` · ${e.user.email}` : ""}{e.grade ? ` · ${e.grade.name}` : ""}</p></td>
+                  <td className="px-4 py-3"><p className="font-medium">{e.name} {e.user && <Badge tone="good">Has login</Badge>} {e.status === "left" && <Badge>Former employee</Badge>}{e.status === "archived" && <Badge>Archived</Badge>}</p><p className="text-xs text-ink-soft">{e.staff_no}{e.phone ? ` · ${e.phone}` : ""}{e.user?.email ? ` · ${e.user.email}` : ""}{e.grade ? ` · ${e.grade.name}` : ""}</p></td>
                   <td className="px-4 py-3">{(e.branches?.length ? e.branches.map((b) => b.name) : [e.branch?.name ?? "–"]).join(", ")}</td>
                   <td className="px-4 py-3">{[e.job_title, e.department].filter(Boolean).join(" · ") || "–"}</td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">{formatKobo(e.basic_salary)}</td>
@@ -163,7 +163,7 @@ function EmployeeModal({ employee, onClose }: { employee: Employee | null; onClo
             options={[{ value: "", label: grades.length ? "Choose a grade" : "No grades yet (add them under Staff grades)" }, ...grades.map((g) => ({ value: String(g.id), label: `${g.name}${g.overtime_rate ? ` · overtime ${formatKobo(g.overtime_rate)}/${g.overtime_basis}` : ""}` }))]}
             hint="Sets their overtime rate and Sunday pay." />
           <MoneyField label="Own overtime rate (optional)" value={f.overtime} onChange={set("overtime")} hint="Only if this person is paid differently from their grade. Leave empty to use the grade's rate." />
-          {employee && <SelectField label="Status" value={f.status} onChange={set("status")} options={[{ value: "active", label: "Current staff" }, { value: "left", label: "Left the business" }]} />}
+          {employee && <SelectField label="Status" value={f.status} onChange={set("status")} options={[{ value: "active", label: "Current employee" }, { value: "left", label: "Former employee" }]} />}
         </div>
 
         {showLogin && employee?.user && (
