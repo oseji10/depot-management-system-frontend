@@ -303,7 +303,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
         {/* Phone only: the business and branch pickers (on a computer they are in the top bar) */}
         <div className="relative pt-2 lg:hidden">{switchers}</div>
         {newSale && (
-          <div className="relative px-4 pt-2 pb-1">
+          <div className="relative hidden px-4 pt-2 pb-1 lg:block">
             <Link href="/pos" onClick={() => setOpen(false)} className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#a50006] shadow-lg shadow-black/15 transition hover:bg-[#fff3f3] active:scale-[0.98]">
               <Icon name="pos" /> New sale
             </Link>
@@ -355,12 +355,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
         {/* Phone only: who is signed in and sign out */}
         <div className="relative space-y-2 p-3 lg:hidden">
           {isRep && <SyncChip />}
-          <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
-            <p className="truncate text-sm font-semibold">{s.user.name}</p>
-            <p className="truncate text-xs text-white/90">{s.roles[0] ?? (s.isPlatform ? "Super admin" : "No role")} · {scopeLabel}</p>
-            <Link href="/access" onClick={() => setOpen(false)} className="text-[11px] text-white/80 hover:underline">Why can&apos;t I see a menu?</Link>
-          </div>
-          <button onClick={logout} className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-2xl bg-white/95 px-4 text-[15px] font-extrabold text-[#a50006]">
+          <button onClick={logout} className="flex min-h-11 w-full items-center justify-center gap-2.5 rounded-xl bg-white/95 px-4 text-sm font-bold text-[#a50006]">
             <Icon name="logout" className="size-5" /> Sign out
           </button>
         </div>
