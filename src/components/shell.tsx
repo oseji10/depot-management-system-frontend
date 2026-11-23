@@ -303,8 +303,8 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
         {/* Phone only: the business and branch pickers (on a computer they are in the top bar) */}
         <div className="relative pt-2 lg:hidden">{switchers}</div>
         {newSale && (
-          <div className="relative px-4 pb-1 lg:hidden">
-            <Link href="/pos" onClick={() => setOpen(false)} className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#a50006] shadow-lg shadow-black/15">
+          <div className="relative px-4 pt-2 pb-1">
+            <Link href="/pos" onClick={() => setOpen(false)} className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#a50006] shadow-lg shadow-black/15 transition hover:bg-[#fff3f3] active:scale-[0.98]">
               <Icon name="pos" /> New sale
             </Link>
           </div>
@@ -376,15 +376,10 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
               <p className="truncate text-[11px] text-white/85">{scopeLabel}</p>
             </div>
           </div>
-          <div className="flex min-w-0 flex-1 items-center gap-2 [&>div]:px-0 [&>div]:pb-0 [&>div]:flex [&>div]:items-center [&>div]:gap-2 [&>div]:space-y-0 [&_label]:sr-only [&_select]:min-w-40 [&_select]:py-1.5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 [&>div]:px-0 [&>div]:pb-0 [&>div]:flex [&>div]:items-center [&>div]:gap-2 [&>div]:space-y-0 [&_label]:sr-only [&_select]:w-44 [&_select]:min-w-0 [&_select]:py-1.5">
             {switchers}
           </div>
           {isRep && <SyncChip compact />}
-          {newSale && (
-            <Link href="/pos" className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold whitespace-nowrap text-[#a50006] shadow-sm transition hover:bg-[#fff3f3]">
-              <Icon name="pos" /> New sale
-            </Link>
-          )}
           <NotificationBell />
           <UserMenu name={s.user.name} detail={`${s.roles[0] ?? (s.isPlatform ? "Super admin" : "No role")} · ${scopeLabel}`} onLogout={logout} />
         </header>
