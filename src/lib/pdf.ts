@@ -1,7 +1,9 @@
 /** A tiny table-to-PDF writer (A4 landscape, Helvetica). No libraries needed, so it works offline too. */
 export type Letterhead = { name: string; lines: string[] };
 export type Logo = { bytes: Uint8Array; w: number; h: number };
-export type PdfTable = { title: string; subtitle?: string; head: string[]; widths: number[]; right: boolean[]; rows: string[][]; foot?: string[] };
+export type PdfTable = { title: string; subtitle?: string; head: string[]; widths: number[]; right: boolean[]; rows: string[][]; foot?: string[];
+  /** Signature lines under the table, each with its caption underneath (e.g. "Authorized signatory"). */
+  signatures?: string[] };
 
 const W = 842, H = 595, M = 30; // A4 landscape in points
 /** Non-Latin characters become "?"; brackets are escaped later, when the text is written. */
@@ -70,6 +72,18 @@ export function tablePdf(t: PdfTable, head?: Letterhead, logo?: Logo | null): Bl
   start();
   t.rows.forEach((r) => { if (y < M + 20) start(); row(r, false); });
   if (t.foot) { if (y < M + 20) start(); row(t.foot, true); }
+  if (t.signatures?.length) {
+    const need = 80;
+    if (y - need < M) { pages.push(out); out = ""; y = H - M - 10; }
+    y -= 50; // room to sign
+    const bw = 220, gap = 40;
+    t.signatures.forEach((label, i) => {
+      const x = M + i * (bw + gap);
+      out += `0.2 G ${x.toFixed(1)} ${y.toFixed(1)} m ${(x + bw).toFixed(1)} ${y.toFixed(1)} l S\n`;
+      text(label, x - 4, y - 12, 9, true, false, bw);
+    });
+    y -= 30;
+  }
   pages.push(out);
 
   const objs: string[] = [];

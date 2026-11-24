@@ -18,6 +18,8 @@ import type { Paginated, PayrollRun, Payslip, Session } from "../../../../lib/ty
 type Row = ReturnType<typeof scheduleRows>[number];
 type MoneyKey = "basic" | "rewards" | "other_earnings" | "deductions" | "net";
 type Col = { key: string; label: string; width: number; money?: MoneyKey; cell: (x: Row) => ReactNode; text: (x: Row) => string };
+/** The signature line at the bottom of the printed schedule and the PDF (not shown on screen). */
+const SIGNERS = ["Authorized signatory"];
 const dash = (n: number, neg = false) => (n ? `${neg ? "−" : ""}${formatAmount(n)}` : "–");
 
 /** Every column the schedule can show. Pick any of them to print or download (e.g. only name and net pay for the bank). */
@@ -84,6 +86,7 @@ function SchedulePage() {
         widths: cols.map((c) => Math.round((c.width / cols.reduce((n, x) => n + x.width, 0)) * 102)), right: cols.map((c) => !!c.money),
         rows: rows.map((x) => cols.map((c) => c.text(x))),
         foot: cols.map((c, i) => (c.money ? (c.money === "deductions" ? `-${formatAmount(sum(c.money))}` : formatAmount(sum(c.money))) : i === 0 ? "Total" : "")),
+        signatures: SIGNERS,
       }, { name: st?.name ?? "", lines: [st?.address, st?.phone && `Tel: ${st.phone}`, st?.email && `Email: ${st.email}`].filter(Boolean) as string[] }, jpeg));
     } catch (e) { setPdfNote((e as Error).message); } finally { setPdfBusy(false); }
   };
@@ -187,6 +190,15 @@ function SchedulePage() {
           )}
         </tbody>
       </TableCard>
+
+      <section aria-label="Signature" className="hidden print:mt-16 print:block print:break-inside-avoid">
+        {SIGNERS.map((label) => (
+          <div key={label} className="w-64 max-w-full">
+            <div className="border-t border-ink/60 print:border-black" />
+            <p className="mt-1.5 text-sm font-semibold">{label}</p>
+          </div>
+        ))}
+      </section>
 
       {viewing && r && (
         <Modal title={`${viewing.employee.name} · ${monthLabel(r.period)}`} onClose={() => setViewing(null)}>

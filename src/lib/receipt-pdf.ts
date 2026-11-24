@@ -8,14 +8,24 @@ const naira = (k: number) => `N${formatAmount(k)}`;
 
 export type StoreHead = { name?: string | null; address?: string | null; phone?: string | null; email?: string | null; logo_url?: string | null } | null | undefined;
 
-/** The business logo as JPEG bytes for the PDF, or null if there is none or it cannot be fetched (offline, for instance). */
-export async function fetchLogo(store: StoreHead): Promise<Logo | null> {
-  if (!store?.logo_url) return null;
-  try {
-    const res = await fetch(`${API_URL}${store.logo_url}`, { headers: authHeaders() });
-    if (!res.ok) return null;
-    return await logoJpeg(URL.createObjectURL(await res.blob()));
-  } catch { return null; }
+const logoCache = new Map<string, Promise<Logo | null>>();
+
+/** The business logo as JPEG bytes for the PDF, or null if there is none or it cannot be fetched (offline, for instance). Fetched once per page load. */
+export function fetchLogo(store: StoreHead): Promise<Logo | null> {
+  const url = store?.logo_url;
+  if (!url) return Promise.resolve(null);
+  if (!logoCache.has(url)) {
+    logoCache.set(url, (async () => {
+      try {
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 8000);
+        const res = await fetch(`${API_URL}${url}`, { headers: authHeaders(), signal: ctl.signal }).finally(() => clearTimeout(timer));
+        if (!res.ok) return null;
+        return await logoJpeg(URL.createObjectURL(await res.blob()));
+      } catch { return null; }
+    })());
+  }
+  return logoCache.get(url)!;
 }
 
 /** Builds the sale's receipt (or invoice, when money is still owed) as a PDF file ready to attach or share. */

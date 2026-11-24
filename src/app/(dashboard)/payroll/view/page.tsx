@@ -3,8 +3,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
-import { WhatsAppButton } from "../../../../components/whatsapp-button";
-import { payslipMessage } from "../../../../lib/share";
 import { PayslipDownloadButton, PayslipShareButton } from "../../../../components/payslip-share-button";
 import { Badge, Button, Card, ErrorNote, Field, Modal, MoneyField, PageHeader, SelectField, Stat } from "../../../../components/ui";
 import { withSuspense } from "../../../../components/suspense-page";
@@ -93,7 +91,7 @@ function RunPage() {
                 </table>
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-soft">
                   <span>{p.employee.bank_name ? `${p.employee.bank_name} · ${p.employee.account_number ?? ""} · ${p.employee.account_name ?? ""}` : "No bank details on file"}</span>
-                  <span className="flex flex-wrap gap-2"><PayslipDownloadButton slip={p} run={r} store={s.store} /><WhatsAppButton size="sm" phone={p.employee.phone} text={payslipMessage(p, r, s.store?.name ?? "")} label="Send as text" />{draft && s.can("payroll.manage") && <Button size="sm" variant="secondary" onClick={() => setAdding(p)}>Add bonus or deduction</Button>}</span>
+                  <span className="flex flex-wrap gap-2"><PayslipDownloadButton slip={p} run={r} store={s.store} />{draft && s.can("payroll.manage") && <Button size="sm" variant="secondary" onClick={() => setAdding(p)}>Add bonus or deduction</Button>}</span>
                 </div>
               </div>
             )}
