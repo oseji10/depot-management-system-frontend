@@ -8,6 +8,7 @@ import { api } from "../../../../lib/api";
 import { formatDateTime } from "../../../../lib/format";
 import type { Movement, Paginated } from "../../../../lib/types";
 import { MOVEMENT_LABEL, STATUS_LABEL } from "../../../../lib/units";
+import { DateInput } from "../../../../components/date-input";
 
 const selectClass = "min-h-11 rounded-xl border border-line bg-white px-3.5 text-sm shadow-sm transition hover:border-[#ff3b3f]/40 focus:border-[#ff3b3f] focus:outline-none focus:ring-4 focus:ring-[#ff3b3f]/15";
 
@@ -59,8 +60,8 @@ export default function StockLedgerPage() {
           <option value="">Any status</option>
           {Object.entries(STATUS_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        <label className="text-xs text-ink-soft">From<input type="date" value={from} onChange={(e) => reset(setFrom)(e.target.value)} className={`${selectClass} mt-0.5 block`} /></label>
-        <label className="text-xs text-ink-soft">To<input type="date" value={to} onChange={(e) => reset(setTo)(e.target.value)} className={`${selectClass} mt-0.5 block`} /></label>
+        <label className="text-xs text-ink-soft">From<DateInput value={from} onChange={(v) => reset(setFrom)(v)} className={`${selectClass} mt-0.5 block`} /></label>
+        <label className="text-xs text-ink-soft">To<DateInput value={to} onChange={(v) => reset(setTo)(v)} className={`${selectClass} mt-0.5 block`} /></label>
       </div>
 
       <div className="relative overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">

@@ -6,6 +6,7 @@ import { Badge, Button, ErrorNote, Field, Modal, PageHeader, Stat, TableEmpty, T
 import { useOptions } from "../../../../hooks/options";
 import { useSession } from "../../../../hooks/session";
 import { api } from "../../../../lib/api";
+import { formatDate } from "../../../../lib/format";
 import type { ExpiryBatch, ExpiryReport } from "../../../../lib/types";
 
 const selectClass = "min-h-11 rounded-xl border border-line bg-white px-3.5 text-sm shadow-sm focus:border-[#ff3b3f] focus:outline-none focus:ring-4 focus:ring-[#ff3b3f]/15";
@@ -117,7 +118,7 @@ export default function ExpiryPage() {
                   <td className="px-4 py-3"><p className="font-medium">{r.product.name}</p><p className="text-xs text-ink-soft">{r.product.sku}</p></td>
                   <td className="px-4 py-3">{r.warehouse.name}</td>
                   <td className="px-4 py-3">{r.batch_no || <span className="text-ink-soft">–</span>}</td>
-                  <td className="px-4 py-3">{r.expiry_date}<p className="text-xs text-ink-soft">{when(r)}</p></td>
+                  <td className="px-4 py-3">{formatDate(r.expiry_date)}<p className="text-xs text-ink-soft">{when(r)}</p></td>
                   <td className="px-4 py-3 text-right font-medium">{r.quantity}</td>
                   <td className="px-4 py-3"><Badge tone={r.state === "expired" ? "bad" : r.state === "soon" ? "warn" : "good"}>{r.state === "expired" ? "Expired" : r.state === "soon" ? "Expiring soon" : "In date"}</Badge></td>
                 </tr>

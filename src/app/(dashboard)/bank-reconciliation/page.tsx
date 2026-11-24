@@ -93,7 +93,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
             </div>
             <Card>
               <p className="text-sm">{parsed ? <><b>{parsed.lines.length}</b> lines read{parsed.skipped > 0 && <>, {parsed.skipped} rows skipped (no date or amount)</>}.{closing != null && <> Closing balance {formatKobo(closing)}.</>}</> : null}</p>
-              {parsed && parsed.lines.slice(0, 3).map((l, i) => <p key={i} className="text-xs text-ink-soft">{l.date} · {l.description.slice(0, 50)} · {formatKobo(l.amount)}</p>)}
+              {parsed && parsed.lines.slice(0, 3).map((l, i) => <p key={i} className="text-xs text-ink-soft">{/^\d{4}-\d{2}-\d{2}/.test(l.date) ? formatDate(l.date.slice(0, 10)) : l.date} · {l.description.slice(0, 50)} · {formatKobo(l.amount)}</p>)}
             </Card>
           </>
         )}

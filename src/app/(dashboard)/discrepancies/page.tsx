@@ -8,6 +8,7 @@ import { useOptions } from "../../../hooks/options";
 import { api } from "../../../lib/api";
 import { formatDate } from "../../../lib/format";
 import type { Discrepancy, Paginated } from "../../../lib/types";
+import { DateInput } from "../../../components/date-input";
 
 export default function DiscrepanciesPage() {
   const suppliers = useOptions("/suppliers");
@@ -42,8 +43,8 @@ export default function DiscrepanciesPage() {
           <option value="">All suppliers</option>
           {suppliers.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
         </select>
-        <label className="text-xs text-ink-soft">From<input type="date" value={from} onChange={(e) => reset(setFrom)(e.target.value)} className={`${control} mt-0.5 block`} /></label>
-        <label className="text-xs text-ink-soft">To<input type="date" value={to} onChange={(e) => reset(setTo)(e.target.value)} className={`${control} mt-0.5 block`} /></label>
+        <label className="text-xs text-ink-soft">From<DateInput value={from} onChange={(v) => reset(setFrom)(v)} className={`${control} mt-0.5 block`} /></label>
+        <label className="text-xs text-ink-soft">To<DateInput value={to} onChange={(v) => reset(setTo)(v)} className={`${control} mt-0.5 block`} /></label>
       </div>
 
       <div className="relative overflow-x-auto rounded-2xl border border-line bg-surface shadow-sm">

@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { formatDate, formatKobo } from "../lib/format";
 import { BarChart, Card, ErrorNote, Stat, filterClass } from "./ui";
+import { DateInput } from "./date-input";
 
 type Named = { name: string };
 type Overview = {
@@ -75,8 +76,8 @@ export function OverviewReport() {
           <button key={k} type="button" onClick={() => { setPreset(k); setRange(PRESETS[k]()); }}
             className={`min-h-9 rounded-lg px-3 text-sm ${preset === k ? "bg-gradient-to-b from-[#ff3b3f] to-[#f40009] font-semibold text-white" : "border border-line text-ink-soft hover:text-ink"}`}>{PRESET_LABEL[k]}</button>
         ))}
-        <label className="ml-auto flex items-center gap-2 text-sm text-ink-soft">From <input type="date" value={from} max={to} onChange={(e) => { setPreset("custom"); setRange([e.target.value, to]); }} className={filterClass} /></label>
-        <label className="flex items-center gap-2 text-sm text-ink-soft">To <input type="date" value={to} min={from} onChange={(e) => { setPreset("custom"); setRange([from, e.target.value]); }} className={filterClass} /></label>
+        <label className="ml-auto flex items-center gap-2 text-sm text-ink-soft">From <DateInput value={from} max={to} onChange={(v) => { setPreset("custom"); setRange([v, to]); }} className={filterClass} /></label>
+        <label className="flex items-center gap-2 text-sm text-ink-soft">To <DateInput value={to} min={from} onChange={(v) => { setPreset("custom"); setRange([from, v]); }} className={filterClass} /></label>
         <button type="button" onClick={() => window.print()} className="min-h-9 rounded-lg border border-line px-3 text-sm font-semibold">Print</button>
       </div>
 

@@ -10,6 +10,7 @@ import { useSession } from "../../../hooks/session";
 import { ApiError, api } from "../../../lib/api";
 import { formatDateTime, formatKobo } from "../../../lib/format";
 import type { BankAccount, PosTerminal, TerminalSummary } from "../../../lib/types";
+import { DateInput } from "../../../components/date-input";
 
 const monthStart = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toLocaleDateString("en-CA"); };
 const today = () => new Date().toLocaleDateString("en-CA");
@@ -35,8 +36,8 @@ export default function PosTerminalsPage() {
       />
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm text-ink-soft">From<input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className={`${filterClass} mt-1 block`} /></label>
-        <label className="text-sm text-ink-soft">To<input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className={`${filterClass} mt-1 block`} /></label>
+        <label className="text-sm text-ink-soft">From<DateInput value={from} max={to} onChange={(v) => setFrom(v)} className={`${filterClass} mt-1 block`} /></label>
+        <label className="text-sm text-ink-soft">To<DateInput value={to} min={from} onChange={(v) => setTo(v)} className={`${filterClass} mt-1 block`} /></label>
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">

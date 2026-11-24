@@ -9,6 +9,7 @@ import { useOptions } from "../../../hooks/options";
 import { useSession } from "../../../hooks/session";
 import { api } from "../../../lib/api";
 import { formatKobo } from "../../../lib/format";
+import { DateInput } from "../../../components/date-input";
 
 type Totals = {
   sales: number; orders: number; average_order: number; discount: number; collected: number; owed: number; cogs: number; gross_profit: number;
@@ -130,10 +131,10 @@ export default function AnalyticsPage() {
           </select>
         </label>
         <label className="text-xs font-medium text-ink-soft">From
-          <input type="date" value={from} max={to} onChange={(e) => { setFrom(e.target.value); setPreset("custom"); }} className="mt-1 block min-h-11 rounded-xl border border-line bg-white px-3 text-sm text-ink" />
+          <DateInput value={from} max={to} onChange={(v) => { setFrom(v); setPreset("custom"); }} className="mt-1 block min-h-11 rounded-xl border border-line bg-white px-3 text-sm text-ink" />
         </label>
         <label className="text-xs font-medium text-ink-soft">To
-          <input type="date" value={to} min={from} onChange={(e) => { setTo(e.target.value); setPreset("custom"); }} className="mt-1 block min-h-11 rounded-xl border border-line bg-white px-3 text-sm text-ink" />
+          <DateInput value={to} min={from} onChange={(v) => { setTo(v); setPreset("custom"); }} className="mt-1 block min-h-11 rounded-xl border border-line bg-white px-3 text-sm text-ink" />
         </label>
         {s.level !== "branch" && branches.length > 1 && (
           <label className="text-xs font-medium text-ink-soft">Branch

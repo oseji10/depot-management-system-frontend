@@ -11,6 +11,7 @@ import { useSession } from "../../../hooks/session";
 import { api } from "../../../lib/api";
 import { formatAmount, formatDate, sourceLabel } from "../../../lib/format";
 import type { JournalEntry, Paginated } from "../../../lib/types";
+import { DateInput } from "../../../components/date-input";
 
 export default function JournalsPage() {
   const s = useSession();
@@ -52,9 +53,9 @@ export default function JournalsPage() {
           <option value="posted">Posted</option>
         </FilterSelect>
         <label className="sr-only" htmlFor="jr-from">From date</label>
-        <input id="jr-from" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className={filterClass} />
+        <DateInput id="jr-from" value={from} onChange={(v) => { setFrom(v); setPage(1); }} className={filterClass} />
         <label className="sr-only" htmlFor="jr-to">To date</label>
-        <input id="jr-to" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className={filterClass} />
+        <DateInput id="jr-to" value={to} onChange={(v) => { setTo(v); setPage(1); }} className={filterClass} />
         {hasFilters && (
           <button onClick={reset} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-[#f40009] transition hover:bg-[#ffe9ea]">
             <Svg d={ICON.x} /> Clear

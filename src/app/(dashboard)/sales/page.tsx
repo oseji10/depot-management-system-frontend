@@ -12,6 +12,7 @@ import { api } from "../../../lib/api";
 import { formatDateTime, formatKobo } from "../../../lib/format";
 import { PAYMENT_LABEL, PAYMENT_TONE } from "../../../lib/status";
 import type { Paginated, Sale, SalesSummary } from "../../../lib/types";
+import { DateInput } from "../../../components/date-input";
 
 type Filter = "all" | "paid" | "partial" | "unpaid" | "void";
 
@@ -64,8 +65,8 @@ export default function SalesPage() {
 
       <Toolbar>
         <SearchBox id="sale-search" value={search} onChange={reset(setSearch)} placeholder="Search number or customer" />
-        <label className="flex items-center gap-2 text-sm text-ink-soft">From <input type="date" value={from} onChange={(e) => reset(setFrom)(e.target.value)} className={filterClass} aria-label="From date" /></label>
-        <label className="flex items-center gap-2 text-sm text-ink-soft">To <input type="date" value={to} onChange={(e) => reset(setTo)(e.target.value)} className={filterClass} aria-label="To date" /></label>
+        <label className="flex items-center gap-2 text-sm text-ink-soft">From <DateInput value={from} onChange={(v) => reset(setFrom)(v)} className={filterClass} aria-label="From date" /></label>
+        <label className="flex items-center gap-2 text-sm text-ink-soft">To <DateInput value={to} onChange={(v) => reset(setTo)(v)} className={filterClass} aria-label="To date" /></label>
         {(from || to) && <Button variant="ghost" size="sm" onClick={() => { setFrom(""); setTo(""); setPage(1); }}>Clear dates</Button>}
       </Toolbar>
 

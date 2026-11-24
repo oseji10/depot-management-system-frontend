@@ -9,6 +9,7 @@ import { api } from "../../../lib/api";
 import { formatAmount, formatDate } from "../../../lib/format";
 import { ACCOUNT_TYPE_LABEL } from "../../../lib/status";
 import type { Account, AccountType, Paginated } from "../../../lib/types";
+import { DateInput as DateBox } from "../../../components/date-input";
 
 type Row = { id: number; code: string; name: string; amount: number };
 type Section = { rows: Row[]; total: number };
@@ -31,7 +32,7 @@ function DateInput({ id, label, value, onChange }: { id: string; label: string; 
   return (
     <label htmlFor={id} className="flex items-center gap-2 text-sm text-ink-soft">
       {label}
-      <input id={id} type="date" value={value} onChange={(e) => onChange(e.target.value)} className={filterClass} />
+      <DateBox id={id} value={value} onChange={(v) => onChange(v)} className={filterClass} />
     </label>
   );
 }

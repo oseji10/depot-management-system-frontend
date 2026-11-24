@@ -14,6 +14,7 @@ import { useSession } from "../../../hooks/session";
 import { ApiError, api } from "../../../lib/api";
 import { formatDate, formatKobo, formatTime } from "../../../lib/format";
 import type { Expense, ExpenseList } from "../../../lib/types";
+import { DateInput } from "../../../components/date-input";
 
 type Filter = "all" | "posted" | "void";
 
@@ -92,8 +93,8 @@ export default function ExpensesPage() {
             {categories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         )}
-        <label className="flex items-center gap-2 text-sm text-ink-soft">From <input type="date" value={from} onChange={(e) => reset(setFrom)(e.target.value)} className={filterClass} aria-label="From date" /></label>
-        <label className="flex items-center gap-2 text-sm text-ink-soft">To <input type="date" value={to} onChange={(e) => reset(setTo)(e.target.value)} className={filterClass} aria-label="To date" /></label>
+        <label className="flex items-center gap-2 text-sm text-ink-soft">From <DateInput value={from} onChange={(v) => reset(setFrom)(v)} className={filterClass} aria-label="From date" /></label>
+        <label className="flex items-center gap-2 text-sm text-ink-soft">To <DateInput value={to} onChange={(v) => reset(setTo)(v)} className={filterClass} aria-label="To date" /></label>
       </Toolbar>
 
       <div className="mb-4">

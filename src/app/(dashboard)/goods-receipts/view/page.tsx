@@ -79,7 +79,7 @@ function GoodsReceiptPage() {
               <tr key={l.id}>
                 <td className="px-4 py-3">
                   <p className="font-medium">{l.product?.name}</p>
-                  <p className="text-xs text-ink-soft">{l.product?.sku} · counted in {l.unit?.name.toLowerCase()}s{l.reason ? ` · ${l.reason}` : ""}{l.expiry_date ? ` · expires ${l.expiry_date}${l.batch_no ? ` (batch ${l.batch_no})` : ""}` : ""}</p>
+                  <p className="text-xs text-ink-soft">{l.product?.sku} · counted in {l.unit?.name.toLowerCase()}s{l.reason ? ` · ${l.reason}` : ""}{l.expiry_date ? ` · expires ${formatDate(l.expiry_date)}${l.batch_no ? ` (batch ${l.batch_no})` : ""}` : ""}</p>
                 </td>
                 <td className="px-4 py-3 text-right">{l.delivered}</td>
                 <td className="px-4 py-3 text-right font-medium text-[#f40009]">{l.accepted}</td>

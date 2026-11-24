@@ -7,6 +7,7 @@ import { useSession } from "../../../hooks/session";
 import { api } from "../../../lib/api";
 import { formatDate, formatKobo, koboToInput, nairaToKobo } from "../../../lib/format";
 import type { Employee, OvertimeEntry, Paginated } from "../../../lib/types";
+import { DateInput } from "../../../components/date-input";
 
 const LABEL = { pending: "Waiting for approval", approved: "Approved, not yet paid", rejected: "Rejected", paid: "Paid" } as const;
 const TONE = { pending: "warn", approved: "good", rejected: "bad", paid: "neutral" } as const;
@@ -85,9 +86,9 @@ export default function OvertimePage() {
           {(employees.data ?? []).map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
         </select>
         <div className="flex items-center gap-1.5 rounded-xl border border-line bg-white px-2">
-          <input type="date" aria-label="From" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="min-h-10 bg-transparent text-sm" />
+          <DateInput aria-label="From" value={from} max={to || undefined} onChange={(v) => setFrom(v)} className="min-h-10 bg-transparent text-sm" />
           <span className="text-ink-soft">–</span>
-          <input type="date" aria-label="To" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="min-h-10 bg-transparent text-sm" />
+          <DateInput aria-label="To" value={to} min={from || undefined} onChange={(v) => setTo(v)} className="min-h-10 bg-transparent text-sm" />
         </div>
         {canApprove && pending.length > 0 && (
           <div className="ml-auto flex gap-2">

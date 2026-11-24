@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useId, useState, type ButtonHTMLAttributes, type ChangeEvent, type InputHTMLAttributes, type ReactNode } from "react";
+import { DateInput } from "./date-input";
 
 export const inputClass =
   "min-h-11 w-full rounded-xl border border-line bg-white px-3.5 text-sm shadow-sm transition placeholder:text-ink-soft/60 hover:border-[#ff3b3f]/40 focus:border-[#ff3b3f] focus:outline-none focus:ring-4 focus:ring-[#ff3b3f]/15 aria-[invalid=true]:border-[#c23a3a] disabled:bg-paper disabled:text-ink-soft";
@@ -70,6 +71,20 @@ export function Field({ label, error, hint, className = "", ...rest }: FieldProp
   const id = useId();
   const [shown, setShown] = useState(false);
   const isPassword = rest.type === "password";
+  if (rest.type === "date") {
+    // Always DD/MM/YYYY with a calendar, whatever the browser's language. onChange still gets an event-like { target: { value } }.
+    const { onChange, value, min, max, name, required, disabled, autoFocus } = rest;
+    const emit = (v: string) => onChange?.({ target: { value: v, name }, currentTarget: { value: v, name } } as unknown as ChangeEvent<HTMLInputElement>);
+    return (
+      <div className={className}>
+        <label htmlFor={id} className="mb-1.5 block text-sm font-medium">{label}</label>
+        <DateInput id={id} value={String(value ?? "")} onChange={emit} min={min ? String(min) : undefined} max={max ? String(max) : undefined} name={name}
+          required={required} disabled={disabled} autoFocus={autoFocus} aria-invalid={!!error} aria-describedby={error || hint ? `${id}-msg` : undefined}
+          className={inputClass} wrapperClassName="relative block w-full" />
+        {(error || hint) && <p id={`${id}-msg`} className={`mt-1.5 text-xs ${error ? "font-medium text-[#c23a3a]" : "text-ink-soft"}`}>{error || hint}</p>}
+      </div>
+    );
+  }
   const input = (
     <input
       id={id}

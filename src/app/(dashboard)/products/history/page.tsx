@@ -10,6 +10,7 @@ import { useOptions } from "../../../../hooks/options";
 import { api } from "../../../../lib/api";
 import { formatDateTime } from "../../../../lib/format";
 import { MOVEMENT_LABEL, STATUS_LABEL, formatQty } from "../../../../lib/units";
+import { DateInput } from "../../../../components/date-input";
 
 type Move = {
   id: number; at: string; type: string; status: string; quantity: number; before: number; after: number; reference: string | null; note: string | null;
@@ -120,9 +121,9 @@ function HistoryPage() {
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search product or reference" aria-label="Search" className={`${inputClass} w-56 sm:w-64`} />
         </form>
         <div className="flex items-center gap-1.5 rounded-xl border border-line bg-white px-2 shadow-sm">
-          <input type="date" value={from} max={to} onChange={(e) => { setFrom(e.target.value); setPage(1); }} aria-label="From" className="min-h-10 bg-transparent text-sm" />
+          <DateInput value={from} max={to} onChange={(v) => { setFrom(v); setPage(1); }} aria-label="From" className="min-h-10 bg-transparent text-sm" />
           <span className="text-ink-soft">–</span>
-          <input type="date" value={to} min={from} onChange={(e) => { setTo(e.target.value); setPage(1); }} aria-label="To" className="min-h-10 bg-transparent text-sm" />
+          <DateInput value={to} min={from} onChange={(v) => { setTo(v); setPage(1); }} aria-label="To" className="min-h-10 bg-transparent text-sm" />
         </div>
       </div>
 
