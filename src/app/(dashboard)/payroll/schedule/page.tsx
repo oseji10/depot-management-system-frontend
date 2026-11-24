@@ -23,7 +23,7 @@ const dash = (n: number, neg = false) => (n ? `${neg ? "−" : ""}${formatAmount
 /** Every column the schedule can show. Pick any of them to print or download (e.g. only name and net pay for the bank). */
 const COLUMNS: Col[] = [
   { key: "employee", label: "Employee", width: 20, cell: (x) => <><p className="font-medium text-[#f40009] print:text-black">{x.name}</p><p className="text-xs text-ink-soft">{x.staff_no}</p></>, text: (x) => `${x.name} (${x.staff_no})` },
-  { key: "bank", label: "Bank", width: 14, cell: (x) => <>{x.bank_name ?? <Badge tone="warn">No bank</Badge>}{x.bank_name && !x.bank_code && <span className="block text-[11px] text-ink-soft print:hidden">bank code not found</span>}</>, text: (x) => x.bank_name ?? "-" },
+  { key: "bank", label: "Bank", width: 14, cell: (x) => <>{x.bank_name ?? <Badge tone="warn">No bank</Badge>}</>, text: (x) => x.bank_name ?? "-" },
   { key: "account", label: "Account", width: 18, cell: (x) => <><p className="font-mono text-xs">{x.account_number ?? "–"}</p><p className="text-xs text-ink-soft">{x.account_name}</p></>, text: (x) => [x.account_number, x.account_name].filter(Boolean).join(" ") || "-" },
   { key: "basic", label: "Basic", width: 10, money: "basic", cell: (x) => formatAmount(x.basic), text: (x) => formatAmount(x.basic) },
   { key: "rewards", label: "Sales reward", width: 10, money: "rewards", cell: (x) => dash(x.rewards), text: (x) => (x.rewards ? formatAmount(x.rewards) : "-") },
@@ -210,7 +210,7 @@ function SchedulePage() {
         </Modal>
       )}
 
-      <p className="mt-3 text-xs text-ink-soft print:hidden">The bank upload file has one line per person: beneficiary, account number, bank code, bank name, amount, narration and a reference. Bank codes are filled in from the bank name where it is recognised; check them against your bank&apos;s template before uploading.</p>
+      <p className="mt-3 text-xs text-ink-soft print:hidden">The bank upload file has one line per person: beneficiary, account number, bank name, amount, narration and a reference.</p>
     </>
   );
 }

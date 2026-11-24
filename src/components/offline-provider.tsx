@@ -40,7 +40,7 @@ export type Offline = {
   loadCustomers: (route: string) => Promise<number>;
   enqueueSale: (input: SaleInput) => Promise<QueueItem>;
   enqueueExpense: (input: ExpenseInput) => Promise<QueueItem>;
-  addCustomer: (input: { name: string; phone: string; address: string; type: "retail" | "wholesale" }) => Promise<OfflineCustomer>;
+  addCustomer: (input: { first_name: string; last_name: string; business_name: string; phone: string; address: string; type: "retail" | "wholesale" }) => Promise<OfflineCustomer>;
   discard: (ref: string) => Promise<void>;
 };
 
@@ -338,9 +338,12 @@ function Engine({ userId, children }: { userId: number; children: ReactNode }) {
     expense_date: new Date().toLocaleDateString("en-CA"),
   }, { title: `${i.category}${i.paid_to ? ` · ${i.paid_to}` : ""}`, total: i.amount }), [enqueue]);
 
-  const addCustomer = useCallback(async (i: { name: string; phone: string; address: string; type: "retail" | "wholesale" }) => {
-    const item = await enqueue("customer", "C", { name: i.name, phone: i.phone, address: i.address, type: i.type }, { title: i.name, total: 0 });
-    return { id: item.ref, name: i.name, phone: i.phone, address: i.address, type: i.type, empties_mode: i.type === "wholesale" ? "balance" : "deposit", credit_limit: 0, owing: 0, pending: true } satisfies OfflineCustomer;
+  const addCustomer = useCallback(async (i: { first_name: string; last_name: string; business_name: string; phone: string; address: string; type: "retail" | "wholesale" }) => {
+    const name = i.business_name || `${i.first_name} ${i.last_name}`.trim();
+    const item = await enqueue("customer", "C", {
+      name, first_name: i.first_name || null, last_name: i.last_name || null, business_name: i.business_name || null, phone: i.phone, address: i.address, type: i.type,
+    }, { title: name, total: 0 });
+    return { id: item.ref, name, phone: i.phone, address: i.address, type: i.type, empties_mode: i.type === "wholesale" ? "balance" : "deposit", credit_limit: 0, owing: 0, pending: true } satisfies OfflineCustomer;
   }, [enqueue]);
 
   const discard = useCallback(async (ref: string) => {

@@ -76,7 +76,7 @@ export default function CustomersPage() {
               <td className="px-5 py-3.5">
                 <Link href={`/customers/view?id=${c.id}`} className="flex items-center gap-3">
                   <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#ffe9ea] text-sm font-bold text-[#f40009]">{c.name.charAt(0).toUpperCase()}</span>
-                  <span><span className="block font-semibold hover:text-[#f40009]">{c.name}</span><span className="block text-xs text-ink-soft">{c.type === "wholesale" ? "Wholesale" : "Retail"}{!c.is_active && " · inactive"}</span></span>
+                  <span><span className="block font-semibold hover:text-[#f40009]">{c.name}</span><span className="block text-xs text-ink-soft">{c.type === "wholesale" ? "Wholesale" : "Retail"}{c.business_name && c.first_name ? ` · ${c.first_name} ${c.last_name ?? ""}`.trimEnd() : ""}{!c.is_active && " · inactive"}</span></span>
                 </Link>
               </td>
               <td className="px-4 py-3.5 text-ink-soft">{c.phone ?? "–"}</td>

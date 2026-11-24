@@ -509,7 +509,10 @@ export type RebateProgress = {
 
 export type Customer = {
   id: number;
-  name: string;
+  name: string; // display name: business name, otherwise "First Last"
+  first_name?: string | null;
+  last_name?: string | null;
+  business_name?: string | null;
   type: "retail" | "wholesale";
   empties_mode?: EmptiesMode;
   phone: string | null;

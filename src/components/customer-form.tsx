@@ -26,7 +26,9 @@ export function CustomerModal({ customer, onClose, onSaved }: { customer?: Custo
   const queryClient = useQueryClient();
   const canLimit = s.can("sales.refund");
   const [form, setForm] = useState({
-    name: customer?.name ?? "",
+    business_name: customer?.business_name ?? "",
+    first_name: customer?.first_name ?? (customer && !customer.business_name && !customer.last_name ? customer.name : ""),
+    last_name: customer?.last_name ?? "",
     type: customer?.type ?? "retail",
     phone: customer?.phone ?? "",
     email: customer?.email ?? "",
@@ -46,7 +48,7 @@ export function CustomerModal({ customer, onClose, onSaved }: { customer?: Custo
       api<Customer>(customer ? `/customers/${customer.id}` : "/customers", {
         method: customer ? "PUT" : "POST",
         body: {
-          name: form.name, type: form.type, ...(form.empties_mode ? { empties_mode: form.empties_mode } : {}), phone: form.phone.trim(), email: form.email || null, address: form.address.trim(),
+          business_name: form.business_name.trim() || null, first_name: form.first_name.trim() || null, last_name: form.last_name.trim() || null, type: form.type, ...(form.empties_mode ? { empties_mode: form.empties_mode } : {}), phone: form.phone.trim(), email: form.email || null, address: form.address.trim(),
           ...(!customer && groupIds.length ? { group_ids: groupIds } : {}),
           notes: form.notes || null, ...(customer ? { is_active: form.is_active } : {}),
           ...(canLimit ? { credit_limit: nairaToKobo(form.credit_limit) } : {}),
@@ -66,7 +68,10 @@ export function CustomerModal({ customer, onClose, onSaved }: { customer?: Custo
       <form onSubmit={(e) => { e.preventDefault(); setErrors({}); save.mutate(); }} className="space-y-4">
         <Section title="Who they are">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Name" value={form.name} onChange={(e) => set("name", e.target.value)} error={errors.name?.[0]} required autoFocus className="sm:col-span-2" />
+            <Field label="Business name" value={form.business_name} onChange={(e) => set("business_name", e.target.value)} error={errors.business_name?.[0]} autoFocus className="sm:col-span-2"
+              hint="The shop, bar or company. Leave empty for a person buying for themselves." />
+            <Field label="First name" value={form.first_name} onChange={(e) => set("first_name", e.target.value)} error={errors.first_name?.[0]} required={!form.business_name.trim()} />
+            <Field label="Last name" value={form.last_name} onChange={(e) => set("last_name", e.target.value)} error={errors.last_name?.[0]} />
             <SelectField label="Type" value={form.type} onChange={(v) => set("type", v)} options={[{ value: "retail", label: "Retail" }, { value: "wholesale", label: "Wholesale" }]} />
           </div>
         </Section>
@@ -127,7 +132,7 @@ export function CustomerModal({ customer, onClose, onSaved }: { customer?: Custo
 
         <div className="flex justify-end gap-2 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" busy={save.isPending} disabled={!form.name.trim() || !form.phone.trim() || !form.address.trim()}>{customer ? "Save changes" : "Add customer"}</Button>
+          <Button type="submit" busy={save.isPending} disabled={(!form.first_name.trim() && !form.business_name.trim()) || !form.phone.trim() || !form.address.trim()}>{customer ? "Save changes" : "Add customer"}</Button>
         </div>
       </form>
     </Modal>

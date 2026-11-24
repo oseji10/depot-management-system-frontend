@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { WhatsAppButton } from "../../../../components/whatsapp-button";
 import { payslipMessage } from "../../../../lib/share";
+import { PayslipDownloadButton, PayslipShareButton } from "../../../../components/payslip-share-button";
 import { Badge, Button, Card, ErrorNote, Field, Modal, MoneyField, PageHeader, SelectField, Stat } from "../../../../components/ui";
 import { withSuspense } from "../../../../components/suspense-page";
 import { useIdParam } from "../../../../hooks/id-param";
@@ -66,10 +67,16 @@ function RunPage() {
       <div className="space-y-2">
         {(r.payslips ?? []).map((p) => (
           <Card key={p.id}>
-            <button type="button" onClick={() => setOpen(open === p.id ? null : p.id)} aria-expanded={open === p.id} className="flex w-full flex-wrap items-center justify-between gap-2 text-left">
-              <span><span className="font-medium">{p.employee.name}</span> <span className="text-xs text-ink-soft">{p.employee.staff_no}{p.employee.job_title ? ` · ${p.employee.job_title}` : ""}</span></span>
-              <span className="text-sm tabular-nums">Gross {formatKobo(p.gross)} · <span className="font-semibold">Net {formatKobo(p.net)}</span></span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => setOpen(open === p.id ? null : p.id)} aria-expanded={open === p.id} className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 text-left">
+                <span><span className="font-medium">{p.employee.name}</span> <span className="text-xs text-ink-soft">{p.employee.staff_no}{p.employee.job_title ? ` · ${p.employee.job_title}` : ""}</span></span>
+                <span className="text-sm tabular-nums">Gross {formatKobo(p.gross)} · <span className="font-semibold">Net {formatKobo(p.net)}</span></span>
+              </button>
+              <span className="flex shrink-0 flex-wrap items-start gap-2">
+                <Link href={`/payroll/payslip?id=${r.id}&slip=${p.id}`}><Button size="sm" variant="secondary">Print payslip</Button></Link>
+                <PayslipShareButton size="sm" slip={p} run={r} store={s.store} label="WhatsApp (PDF)" />
+              </span>
+            </div>
             {open === p.id && (
               <div className="mt-3 border-t border-line pt-3">
                 <table className="w-full text-sm">
@@ -86,7 +93,7 @@ function RunPage() {
                 </table>
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-soft">
                   <span>{p.employee.bank_name ? `${p.employee.bank_name} · ${p.employee.account_number ?? ""} · ${p.employee.account_name ?? ""}` : "No bank details on file"}</span>
-                  <span className="flex flex-wrap gap-2"><Link href={`/payroll/payslip?id=${r.id}&slip=${p.id}`}><Button size="sm" variant="secondary">Print payslip</Button></Link><WhatsAppButton size="sm" phone={p.employee.phone} text={payslipMessage(p, r, s.store?.name ?? "")} label="WhatsApp" />{draft && s.can("payroll.manage") && <Button size="sm" variant="secondary" onClick={() => setAdding(p)}>Add bonus or deduction</Button>}</span>
+                  <span className="flex flex-wrap gap-2"><PayslipDownloadButton slip={p} run={r} store={s.store} /><WhatsAppButton size="sm" phone={p.employee.phone} text={payslipMessage(p, r, s.store?.name ?? "")} label="Send as text" />{draft && s.can("payroll.manage") && <Button size="sm" variant="secondary" onClick={() => setAdding(p)}>Add bonus or deduction</Button>}</span>
                 </div>
               </div>
             )}

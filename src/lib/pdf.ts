@@ -4,6 +4,8 @@ export type Logo = { bytes: Uint8Array; w: number; h: number };
 export type PdfTable = { title: string; subtitle?: string; head: string[]; widths: number[]; right: boolean[]; rows: string[][]; foot?: string[] };
 
 const W = 842, H = 595, M = 30; // A4 landscape in points
+/** Non-Latin characters become "?"; brackets are escaped later, when the text is written. */
+const plain = (s: string) => s.replace(/[^\x20-\x7e]/g, "?");
 const esc = (s: string) => s.replace(/[^\x20-\x7e]/g, "?").replace(/([\\()])/g, "\\$1"); // plain Latin text only
 
 function fit(s: string, w: number, size: number) {
@@ -112,6 +114,8 @@ export type ReceiptPdfInput = {
   number: string;
   when: string;
   items: { name: string; detail: string; total: string }[];
+  /** Titled lists of label / amount rows, shown instead of items (a payslip's earnings and deductions). */
+  groups?: { title: string; rows: [string, string][]; total?: [string, string] }[];
   totals: { label: string; value: string; bold?: boolean }[];
   note?: string;
   footer?: string;
@@ -125,7 +129,7 @@ export function receiptPdf(r: ReceiptPdfInput, logo?: Logo | null): Blob {
   let y = M2;
   const wrap = (s: string, size: number, width: number, bold = false) => {
     const fits = (t: string) => helvWidth(t, size, bold) <= width;
-    const words = esc(s).split(/\s+/).filter(Boolean);
+    const words = plain(s).split(/\s+/).filter(Boolean);
     const rows: string[] = [];
     let cur = "";
     for (let w of words) {
@@ -141,7 +145,7 @@ export function receiptPdf(r: ReceiptPdfInput, logo?: Logo | null): Blob {
     for (const row of rows) { y += size; ops.push({ t: "text", s: row, x: o.x ?? M2, y, size, bold: !!o.bold, align: o.align ?? "l" }); y += (o.gap ?? 2.5); }
   };
   const pair = (a: string, b: string, size = 8.5, bold = false) => {
-    const right = esc(b);
+    const right = plain(b);
     const left = wrap(a, size, inner - helvWidth(right, size, bold) - 8, bold);
     left.forEach((row, i) => {
       y += size;
@@ -164,7 +168,15 @@ export function receiptPdf(r: ReceiptPdfInput, logo?: Logo | null): Blob {
   y += 2;
   r.meta.forEach(([a, b]) => pair(a, b, 8));
   rule();
-  r.items.forEach((it) => { pair(it.name, it.total, 8.5, true); put(it.detail, 7.5, { gap: 4 }); });
+  if (r.groups) {
+    r.groups.forEach((g, i) => {
+      if (i) y += 5;
+      put(g.title.toUpperCase(), 7.5, { bold: true });
+      if (!g.rows.length) put("None", 8);
+      g.rows.forEach(([a, b]) => pair(a, b, 8.5));
+      if (g.total) pair(g.total[0], g.total[1], 8.5, true);
+    });
+  } else r.items.forEach((it) => { pair(it.name, it.total, 8.5, true); put(it.detail, 7.5, { gap: 4 }); });
   rule();
   r.totals.forEach((t) => pair(t.label, t.value, t.bold ? 10 : 8.5, !!t.bold));
   if (r.note) { y += 3; put(r.note, 8, { bold: true }); }

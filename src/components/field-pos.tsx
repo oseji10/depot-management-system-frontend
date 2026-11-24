@@ -502,7 +502,7 @@ function FieldCustomerPicker({ value, onChange }: { value: OfflineCustomer | nul
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [term, setTerm] = useState("");
-  const [form, setForm] = useState({ name: "", phone: "", address: "", type: "retail" as "retail" | "wholesale" });
+  const [form, setForm] = useState({ business_name: "", first_name: "", last_name: "", phone: "", address: "", type: "retail" as "retail" | "wholesale" });
   const [err, setErr] = useState<string | null>(null);
   const [more, setMore] = useState(false);
   const [loadingRoute, setLoadingRoute] = useState<string | null>(null);
@@ -534,12 +534,12 @@ function FieldCustomerPicker({ value, onChange }: { value: OfflineCustomer | nul
   const pick = (c: OfflineCustomer | null) => { onChange(c); setOpen(false); setTerm(""); };
 
   async function create() {
-    if (!form.name.trim()) return setErr("Enter the customer's name.");
+    if (!form.first_name.trim() && !form.business_name.trim()) return setErr("Enter the customer's first name or business name.");
     if (!form.phone.trim()) return setErr("Enter the customer's phone number.");
     if (!form.address.trim()) return setErr("Enter the customer's address.");
     if (o.customers.some((c) => c.phone === form.phone.trim())) return setErr("A customer with this phone number already exists. Search for them instead.");
-    const c = await o.addCustomer({ name: form.name.trim(), phone: form.phone.trim(), address: form.address.trim(), type: form.type });
-    setAdding(false); setForm({ name: "", phone: "", address: "", type: "retail" }); setErr(null);
+    const c = await o.addCustomer({ business_name: form.business_name.trim(), first_name: form.first_name.trim(), last_name: form.last_name.trim(), phone: form.phone.trim(), address: form.address.trim(), type: form.type });
+    setAdding(false); setForm({ business_name: "", first_name: "", last_name: "", phone: "", address: "", type: "retail" }); setErr(null);
     pick(c);
   }
 
@@ -559,7 +559,11 @@ function FieldCustomerPicker({ value, onChange }: { value: OfflineCustomer | nul
           {adding ? (
             <div className="space-y-2.5 p-3">
               <p className="text-sm font-semibold">New customer</p>
-              <input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Name" aria-label="Customer name" className={`${inputClass} min-h-10`} />
+              <input autoFocus value={form.business_name} onChange={(e) => setForm({ ...form, business_name: e.target.value })} placeholder="Business name (optional)" aria-label="Business name" className={`${inputClass} min-h-10`} />
+              <div className="grid grid-cols-2 gap-2">
+                <input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} placeholder="First name" aria-label="First name" className={`${inputClass} min-h-10`} />
+                <input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} placeholder="Last name" aria-label="Last name" className={`${inputClass} min-h-10`} />
+              </div>
               <input value={form.phone} inputMode="tel" onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Phone" aria-label="Customer phone" required className={`${inputClass} min-h-10`} />
               <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Address" aria-label="Customer address" required className={`${inputClass} min-h-10`} />
               <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as "retail" | "wholesale" })} aria-label="Customer type" className={`${filterClass} min-h-10 w-full`}>
@@ -604,7 +608,7 @@ function FieldCustomerPicker({ value, onChange }: { value: OfflineCustomer | nul
                   {loaded && <p className="mt-1.5 font-medium text-ink">{loaded}</p>}
                 </div>
               )}
-              <div className="border-t border-line p-1.5"><button type="button" onClick={() => { setAdding(true); setForm((f) => ({ ...f, name: term })); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[#f40009] transition hover:bg-[#ffe9ea]"><Svg d={ICON.plus} /> Add a new customer</button></div>
+              <div className="border-t border-line p-1.5"><button type="button" onClick={() => { setAdding(true); setForm((f) => ({ ...f, first_name: term })); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[#f40009] transition hover:bg-[#ffe9ea]"><Svg d={ICON.plus} /> Add a new customer</button></div>
             </>
           )}
         </div>

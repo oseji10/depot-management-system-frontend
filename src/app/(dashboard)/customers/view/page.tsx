@@ -34,7 +34,7 @@ function CustomerDetailPage() {
       <PageHeader
         crumb={<Link href="/customers" className="hover:underline">← All customers</Link>}
         title={c.name}
-        description={[c.type === "wholesale" ? "Wholesale" : "Retail", c.phone, c.email].filter(Boolean).join(" · ")}
+        description={[c.type === "wholesale" ? "Wholesale" : "Retail", c.business_name && c.first_name ? `Contact: ${c.first_name} ${c.last_name ?? ""}`.trim() : null, c.phone, c.email].filter(Boolean).join(" · ")}
         action={s.can("customers.manage") && (
           <div className="flex flex-wrap items-start gap-2">
             <Button variant="secondary" onClick={() => setEditing(true)}><Svg d={ICON.edit} /> Edit</Button>

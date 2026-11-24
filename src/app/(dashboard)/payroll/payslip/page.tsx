@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { WhatsAppButton } from "../../../../components/whatsapp-button";
-import { payslipMessage } from "../../../../lib/share";
+import { PayslipDownloadButton, PayslipShareButton } from "../../../../components/payslip-share-button";
+import type { StoreHead } from "../../../../lib/receipt-pdf";
 import { PrintSheet } from "../../../../components/print-sheet";
 import { withSuspense } from "../../../../components/suspense-page";
 import { useIdParam } from "../../../../hooks/id-param";
@@ -23,19 +23,19 @@ function PayslipPage() {
 
   return (
     <PrintSheet back={{ href: `/payroll/view?id=${id}`, label: "Back to payroll" }} title="Payslip" subtitle={r && <>{monthLabel(r.period)}<br />{r.number}</>}>
-      {!r ? <p className="text-ink-soft">{q.error ? (q.error as Error).message : "Loading…"}</p> : slips.map((p, i) => <Slip key={p.id} p={p} first={i === 0} store={store?.name ?? ""} paidAt={r.paid_at} method={r.pay_method} run={r} />)}
+      {!r ? <p className="text-ink-soft">{q.error ? (q.error as Error).message : "Loading…"}</p> : slips.map((p, i) => <Slip key={p.id} p={p} first={i === 0} store={store?.name ?? ""} head={store} paidAt={r.paid_at} method={r.pay_method} run={r} />)}
     </PrintSheet>
   );
 }
 
-function Slip({ p, first, store, paidAt, method, run }: { p: Payslip; first: boolean; store: string; paidAt: string | null; method: string | null; run: PayrollRun }) {
+function Slip({ p, first, store, head, paidAt, method, run }: { p: Payslip; first: boolean; store: string; head: StoreHead; paidAt: string | null; method: string | null; run: PayrollRun }) {
   const earnings = p.lines.filter((l) => l.kind === "earning");
   const deductions = p.lines.filter((l) => l.kind === "deduction");
 
   return (
     <section className={first ? "" : "mt-10 border-t-2 border-dashed border-line pt-6 print:mt-0 print:break-before-page print:border-0 print:pt-0"}>
       {!first && <p className="mb-2 text-base font-bold">{store} · Payslip</p>}
-      <div className="mb-3 print:hidden"><WhatsAppButton size="sm" phone={p.employee.phone} text={payslipMessage(p, run, store)} label={`Send to ${p.employee.name.split(" ")[0]} on WhatsApp`} /></div>
+      <div className="mb-3 flex flex-wrap items-start gap-2 print:hidden"><PayslipShareButton size="sm" slip={p} run={run} store={head} /><PayslipDownloadButton slip={p} run={run} store={head} /></div>
       <div className="mb-4 grid grid-cols-2 gap-4 text-xs">
         <div><p className="text-ink-soft">Employee</p><p className="text-sm font-semibold">{p.employee.name}</p><p className="text-ink-soft">{p.employee.staff_no}{p.employee.job_title ? ` · ${p.employee.job_title}` : ""}</p></div>
         <div className="text-right"><p className="text-ink-soft">Paid to</p><p className="text-sm font-semibold">{p.employee.bank_name ?? "No bank details"}</p><p className="text-ink-soft">{[p.employee.account_number, p.employee.account_name].filter(Boolean).join(" · ")}</p></div>
