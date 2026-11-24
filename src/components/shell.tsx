@@ -186,6 +186,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
         { href: "/pos-terminals", label: "Card terminals", icon: "pos", show: !isRep && s.can("terminals.view") },
         { href: "/bank-accounts", label: "Bank accounts", icon: "accounts", show: !isRep && s.can("accounts.view") },
         { href: "/expenses", label: "Expenses", icon: "expenses", show: !isRep && s.can("expenses.view") },
+        { href: "/expense-categories", label: "Expense categories", icon: "expenses", show: !isRep && s.can("expenses.manage") },
         { href: "/accounts", label: "Chart of accounts", icon: "accounts", show: s.can("accounts.view") },
         { href: "/journals", label: "Journals", icon: "journal", show: s.can("accounts.view") },
         { href: "/bank-reconciliation", label: "Bank reconciliation", icon: "journal", show: s.can("accounts.view") },

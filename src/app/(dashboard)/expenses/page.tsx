@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { DeleteButton } from "../../../components/delete-button";
@@ -54,7 +55,12 @@ export default function ExpensesPage() {
       <PageHeader
         title={offline ? "My expenses" : "Expenses"}
         description={offline ? "Fuel, parking and anything else you paid for while out. It comes off the cash you hand in." : "Money the depot spent, posted to the books as it is recorded."}
-        action={s.can("expenses.create") && <Button onClick={() => setAdding(true)}><Svg d={ICON.plus} /> Log expense</Button>}
+        action={
+          <div className="flex flex-wrap gap-2">
+            {s.can("expenses.manage") && <Link href="/expense-categories" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-4 text-sm font-semibold shadow-sm hover:bg-paper">Categories</Link>}
+            {s.can("expenses.create") && <Button onClick={() => setAdding(true)}><Svg d={ICON.plus} /> Log expense</Button>}
+          </div>
+        }
       />
 
       {notice && <p className="mb-4 rounded-xl bg-[#ffe9ea] px-4 py-3 text-sm font-medium text-[#a50006]">{notice}</p>}

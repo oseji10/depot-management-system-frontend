@@ -45,6 +45,7 @@ export const NAV_RULES: NavRule[] = [
   { href: "/pos-terminals", label: "Card terminals", perm: "terminals.view", notRep: true },
   { href: "/bank-accounts", label: "Bank accounts", perm: "accounts.view", notRep: true },
   { href: "/expenses", label: "Expenses", perm: "expenses.view", notRep: true },
+  { href: "/expense-categories", label: "Expense categories", perm: "expenses.manage", notRep: true },
   { href: "/accounts", label: "Chart of accounts", perm: "accounts.view" },
   { href: "/journals", label: "Journals", perm: "accounts.view" },
   { href: "/bank-reconciliation", label: "Bank reconciliation", perm: "accounts.view" },
