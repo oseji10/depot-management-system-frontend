@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { PrintSheet } from "../../../../components/print-sheet";
 import { withSuspense } from "../../../../components/suspense-page";
@@ -12,7 +13,7 @@ import type { Sale } from "../../../../lib/types";
 /** ?id=<sale>&payment=<payment id>: proof that a customer paid, with what is still owed afterwards. */
 function PaymentReceipt() {
   const id = useIdParam();
-  const paymentId = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("payment") ?? "";
+  const paymentId = useSearchParams().get("payment") ?? "";
   const q = useQuery({ queryKey: ["sale", id], queryFn: () => api<Sale>(`/sales/${id}`) });
   const s = q.data;
   const live = (s?.payments ?? []).filter((p) => !p.voided_at).sort((a, b) => a.paid_at.localeCompare(b.paid_at) || a.id - b.id);

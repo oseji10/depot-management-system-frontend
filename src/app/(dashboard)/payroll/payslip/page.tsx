@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { PayslipDownloadButton, PayslipShareButton } from "../../../../components/payslip-share-button";
 import type { StoreHead } from "../../../../lib/receipt-pdf";
 import { PrintSheet } from "../../../../components/print-sheet";
@@ -16,7 +17,9 @@ import type { PayrollRun, Payslip } from "../../../../lib/types";
 function PayslipPage() {
   const id = useIdParam();
   const { store } = useSession();
-  const slipParam = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("slip") ?? "all";
+  // Read from the router, not window.location: on an in-app click the address bar is updated only after this page first draws,
+  // so window.location still had the previous page's address and every payslip showed until a refresh.
+  const slipParam = useSearchParams().get("slip") ?? "all";
   const q = useQuery({ queryKey: ["payroll-run", id], enabled: !!id, queryFn: () => api<PayrollRun>(`/payroll-runs/${id}`) });
   const r = q.data;
   const slips = (r?.payslips ?? []).filter((p) => slipParam === "all" || String(p.id) === slipParam);

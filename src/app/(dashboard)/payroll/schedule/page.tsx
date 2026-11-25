@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
@@ -42,8 +43,9 @@ const COLS_KEY = "depot.salary-schedule.columns";
 
 /** The salary schedule: who is paid what and where, ready to print or to upload to a bank or payment platform. ?id=<run> picks the run. */
 function SchedulePage() {
-  const fromUrl = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("id") ?? "";
+  const fromUrl = useSearchParams().get("id") ?? "";
   const [chosen, setChosen] = useState(fromUrl);
+  useEffect(() => { if (fromUrl) setChosen(fromUrl); }, [fromUrl]);
   const [viewing, setViewing] = useState<Payslip | null>(null);
   const s = useSession();
   const qc = useQueryClient();
