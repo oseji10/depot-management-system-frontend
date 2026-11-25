@@ -75,7 +75,8 @@ export type AppUser = {
   branch?: { id: number; name: string } | null;
   branches?: { id: number; name: string }[];
   store?: { id: number; name: string } | null;
-  role?: { id: number; name: string } | null;
+  role?: { id: number; name: string } | null; // the first role, for older screens
+  roles_list?: { id: number; name: string }[];
   last_login_at: string | null;
 };
 

@@ -7,7 +7,7 @@ import type { Paginated } from "../lib/types";
 import { Button, ErrorNote, Field, Modal, PageHeader, Pager, SearchBox, SelectField, TableCard, TableEmpty, TableError, TableLoading, Toolbar, theadClass, thClass, Svg, ICON } from "./ui";
 import { DeleteButton } from "./delete-button";
 
-type Option = { value: string | number; label: string };
+type Option = { value: string | number; label: string; alone?: boolean };
 
 export type FieldDef = {
   name: string;
@@ -20,6 +20,12 @@ export type FieldDef = {
   options?: Option[];
   /** Load select options from an API list endpoint. */
   optionsFrom?: { endpoint: string; label?: string; empty?: string };
+  /** multicheck: a true value in this field of a loaded option means it cannot be ticked together with others (e.g. "is_owner"). */
+  aloneFlag?: string;
+  /** Text shown beside an option that stands alone. */
+  aloneNote?: string;
+  /** multicheck: hide the "Main" tag on the first ticked option (it only means something for branches). */
+  noMain?: boolean;
 };
 
 export type Column<T> = { header: string; cell: (row: T) => ReactNode; className?: string };
@@ -255,7 +261,15 @@ function RemoteChecks({ def, value, error, onChange }: { def: FieldDef; value: n
     enabled: !!def.optionsFrom,
     queryFn: async () => (await api<Paginated<Record<string, unknown>> | { data: Record<string, unknown>[] }>(`${def.optionsFrom!.endpoint}?per_page=100`)).data,
   });
-  const opts: Option[] = def.options ?? (data ?? []).map((r) => ({ value: r.id as number, label: String(r[def.optionsFrom?.label ?? "name"]) }));
+  const opts: Option[] = def.options ?? (data ?? []).map((r) => ({
+    value: r.id as number, label: String(r[def.optionsFrom?.label ?? "name"]), alone: def.aloneFlag ? !!r[def.aloneFlag] : false,
+  }));
+  const alone = new Set(opts.filter((o) => o.alone).map((o) => Number(o.value)));
+  const toggle = (id: number, on: boolean) => {
+    if (!on) return onChange(value.filter((x) => x !== id));
+    if (alone.has(id)) return onChange([id]); // e.g. Owner: it replaces everything else
+    onChange([...value.filter((x) => !alone.has(x)), id]);
+  };
 
   return (
     <fieldset>
@@ -267,8 +281,10 @@ function RemoteChecks({ def, value, error, onChange }: { def: FieldDef; value: n
           const at = value.indexOf(id);
           return (
             <label key={id} className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="size-4 accent-[#f40009]" checked={at >= 0} onChange={() => onChange(at >= 0 ? value.filter((x) => x !== id) : [...value, id])} />
-              {o.label}{at === 0 && value.length > 1 && <span className="rounded bg-paper px-1.5 text-[11px] font-semibold text-ink-soft">Main</span>}
+              <input type="checkbox" className="size-4 accent-[#f40009]" checked={at >= 0} onChange={() => toggle(id, at < 0)} />
+              {o.label}
+              {!def.noMain && at === 0 && value.length > 1 && <span className="rounded bg-paper px-1.5 text-[11px] font-semibold text-ink-soft">Main</span>}
+              {o.alone && def.aloneNote && <span className="text-[11px] text-ink-soft">{def.aloneNote}</span>}
             </label>
           );
         })}

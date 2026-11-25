@@ -7,7 +7,7 @@ import { NAV_RULES } from "../../../lib/nav-rules";
 /** Explains, menu by menu, why something is or is not in the sidebar for the signed-in person. */
 export default function AccessPage() {
   const s = useSession();
-  const isRep = !!s.van;
+  const isRep = !!s.van && s.roles.length <= 1; // only-a-van-salesman gets the short menu
   const off = new Set(s.store?.disabled_menus ?? []);
   const permList = s.permissions.includes("*") ? ["everything"] : s.permissions;
 

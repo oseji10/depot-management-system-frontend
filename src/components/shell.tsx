@@ -93,7 +93,9 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
   const wide = pathname === "/pos"; // the till wants every pixel
   const offline = useOffline();
   const logo = useProductImage(s.store?.logo_url);
-  const isRep = !!s.van; // van salesmen get a short menu: their van, the till, their sales and customers
+  // Someone who is only a van salesman gets a short menu: their van, the till, their sales and customers.
+  // With other roles as well, they get the full menu for those roles (each item once), plus their van at the top.
+  const isRep = !!s.van && s.roles.length <= 1;
 
   // Close the drawer with Escape
   useEffect(() => {
@@ -104,7 +106,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
   }, [open]);
 
   const sections: NavSection[] = [
-    { items: [{ href: "/", label: isRep ? "My van" : "Dashboard", icon: isRep ? "van" : "dashboard", show: true }] },
+    { items: [{ href: "/", label: s.van ? "My van" : "Dashboard", icon: s.van ? "van" : "dashboard", show: true }] },
     {
       title: "Sales",
       items: [
@@ -377,7 +379,7 @@ export function Shell({ activeStoreId, children }: { activeStoreId: string | nul
           </div>
           {isRep && <SyncChip compact />}
           <NotificationBell />
-          <UserMenu name={s.user.name} detail={`${s.roles[0] ?? (s.isPlatform ? "Super admin" : "No role")} · ${scopeLabel}`} onLogout={logout} />
+          <UserMenu name={s.user.name} detail={`${s.roles.length ? s.roles.join(", ") : s.isPlatform ? "Super admin" : "No role"} · ${scopeLabel}`} onLogout={logout} />
         </header>
         <NotificationToasts />
         <main className={`min-w-0 px-4 py-6 sm:px-8 sm:py-8 ${wide ? "lg:px-5 lg:py-5" : ""}`}><div className={`mx-auto ${wide ? "max-w-none" : "max-w-6xl"}`}><SubscriptionBanner />{s.subscription?.mode === "blocked" && !s.isPlatform && pathname !== "/subscription/" && pathname !== "/subscription" ? <SubscriptionGate /> : children}</div></main>

@@ -38,7 +38,7 @@ export default function UsersPage() {
       initial={{ is_active: true }}
       toForm={(u) => ({
         name: u.name, email: u.email, phone: u.phone ?? "", password: "", is_active: u.is_active,
-        role_id: u.role?.id ?? "",
+        role_ids: (u.roles_list ?? (u.role ? [u.role] : [])).map((r) => r.id),
         branch_ids: [...new Set([...(u.branch_id ? [u.branch_id] : []), ...(u.branches ?? []).map((b) => b.id)])],
       })}
       columns={[
@@ -51,7 +51,10 @@ export default function UsersPage() {
             </div>
           ),
         },
-        { header: "Role", cell: (u) => u.role?.name ?? <span className="text-ink-soft">None</span> },
+        { header: "Roles", cell: (u) => {
+          const names = (u.roles_list ?? (u.role ? [u.role] : [])).map((r) => r.name);
+          return names.length ? names.join(", ") : <span className="text-ink-soft">None</span>;
+        } },
         {
           header: "Access",
           cell: (u) =>
@@ -67,8 +70,9 @@ export default function UsersPage() {
         { name: "email", label: "Email", type: "email", required: true, hint: "What they sign in with." },
         { name: "phone", label: "Phone" },
         { name: "password", label: "Password", type: "password", required: true, hint: "At least 8 characters. Leave blank when editing to keep the current one." },
-        { name: "role_id", label: "Role", type: "select", required: true,
-          optionsFrom: { endpoint: "/roles", empty: "Select a role" } },
+        { name: "role_ids", label: "Roles", type: "multicheck", required: true, noMain: true, aloneFlag: "is_owner", aloneNote: "(can do everything, so on its own)",
+          hint: "Tick one or more. Their menus and permissions add up; nothing shows twice.",
+          optionsFrom: { endpoint: "/roles" } },
         { name: "branch_ids", label: "Branches", type: "multicheck",
           hint: s.level === "branch" ? "You can give them any of your own branches." : "None ticked = the whole business. The first one ticked is where they start.",
           optionsFrom: { endpoint: "/branches" } },
