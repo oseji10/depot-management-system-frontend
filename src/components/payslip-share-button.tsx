@@ -17,6 +17,7 @@ export function PayslipShareButton({ slip, run, store, label, size = "md" }: { s
   return (
     <WhatsAppPdfButton size={size} label={label ?? `Send to ${first} (PDF)`} phone={slip.employee.phone} who={slip.employee.name}
       text={`Hello ${first}, here is your payslip for ${monthLabel(run.period)} from ${store?.name ?? "us"}. Net pay ${formatKobo(slip.net)}.`}
+      link={{ kind: "payslip", refId: slip.id, caption: "Open your payslip (PDF)" }}
       cacheKey={`${slip.id}-${slip.net}-${slip.lines.length}-${run.paid_at ?? ""}-${store?.logo_url ?? ""}`} make={() => payslipFile(slip, run, store)} />
   );
 }

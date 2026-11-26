@@ -2,10 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { downloadBlob } from "../lib/pdf";
+import { api } from "../lib/api";
 import { whatsappLink, whatsappNumber } from "../lib/share";
 import { Button, Modal } from "./ui";
 
 const ICON = "M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z";
+
+const isPhone = () => typeof navigator !== "undefined" && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent)));
+
+const toBase64 = (f: File) => new Promise<string>((ok, bad) => {
+  const r = new FileReader();
+  r.onload = () => ok(String(r.result).replace(/^data:[^,]*,/, ""));
+  r.onerror = () => bad(new Error("The PDF could not be read."));
+  r.readAsDataURL(f);
+});
 
 /** Whether this browser can hand a PDF file to other apps (phones, and Chrome/Edge/Safari on many computers). */
 function canShareFiles(): boolean {
@@ -18,14 +28,22 @@ function canShareFiles(): boolean {
 /**
  * Shares a PDF (receipt, invoice, payslip) to WhatsApp.
  *
+ * With `link` and a phone number on file (the usual case): the PDF is stored on the server, then WhatsApp opens straight on
+ * the person's chat with the message and a link to the PDF already typed. Press send; they tap the link to open the PDF.
+ * (A web page cannot put a file into a particular chat; WhatsApp only allows a number and text. The link is how the file gets there.)
+ * "Send the file itself" stays available underneath: it opens the share sheet with the PDF attached, then you pick the chat.
+ *
+ * Without a phone number:
  * - Where the browser can share files, the share sheet opens with ONLY the PDF (no text: when text is sent with a file,
  *   WhatsApp often keeps the text and drops the file). Pick WhatsApp, then the person.
  * - Otherwise the PDF is saved, WhatsApp opens on the person's number, and a window explains how to attach it.
  *
  * The PDF is built as soon as the button appears, so the click shares at once (browsers refuse to share once a click is "old").
  */
-export function WhatsAppPdfButton({ make, cacheKey, phone, who, text, label, size = "md", className = "" }: {
+export function WhatsAppPdfButton({ make, cacheKey, phone, who, text, label, size = "md", className = "", link: linkAs }: {
   make: () => Promise<File>; cacheKey: string; phone?: string | null; who: string; text: string; label: string; size?: "sm" | "md"; className?: string;
+  /** Send as a link in the person's chat: what the document is (decides who may share it) and the words before the link. */
+  link?: { kind: "payslip" | "receipt" | "invoice"; refId?: number; caption: string };
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -50,6 +68,35 @@ export function WhatsAppPdfButton({ make, cacheKey, phone, who, text, label, siz
   }, [cacheKey]);
 
   const link = whatsappLink(phone, text);
+  const [chatLink, setChatLink] = useState<string | null>(null);
+  const direct = !!linkAs && !!whatsappNumber(phone);
+
+  /** Store the PDF, then open the person's chat with the message and the PDF link typed in. */
+  const sendInChat = async () => {
+    setErr(null); setChatLink(null);
+    const tab = isPhone() ? null : window.open("about:blank", "_blank"); // computer: open the tab while the click still counts
+    setBusy(true);
+    try {
+      const f = await prepare();
+      const { url } = await api<{ url: string }>("/shared-documents", {
+        method: "POST", body: { kind: linkAs!.kind, ref_id: linkAs!.refId ?? null, filename: f.name, pdf: await toBase64(f) },
+      });
+      const message = `${text}\n\n${linkAs!.caption}: ${url}`;
+      const n = whatsappNumber(phone);
+      if (isPhone()) {
+        // The WhatsApp app itself, on this person's chat.
+        window.location.href = `whatsapp://send?phone=${n}&text=${encodeURIComponent(message)}`;
+        setChatLink(whatsappLink(phone, message)); // in case WhatsApp did not open
+      } else if (tab) {
+        tab.location.href = whatsappLink(phone, message);
+      } else {
+        setChatLink(whatsappLink(phone, message));
+      }
+    } catch (e) {
+      tab?.close();
+      setErr(`${(e as Error).message || "The PDF could not be sent."} You can use "Send the file itself" instead.`);
+    } finally { setBusy(false); }
+  };
 
   const send = async () => {
     setErr(null);
@@ -79,11 +126,17 @@ export function WhatsAppPdfButton({ make, cacheKey, phone, who, text, label, siz
 
   return (
     <span className="inline-flex flex-col gap-1">
-      <button type="button" onClick={send} disabled={busy}
+      <button type="button" onClick={direct ? sendInChat : send} disabled={busy}
         className={`inline-flex items-center justify-center gap-2 rounded-xl border border-[#25d366]/40 bg-[#25d366]/10 font-semibold text-[#128c4a] transition hover:bg-[#25d366]/20 disabled:opacity-60 ${size === "sm" ? "min-h-9 px-3 text-xs" : "min-h-11 px-4 text-sm"} ${className}`}>
         <svg viewBox="0 0 24 24" className="size-4 fill-current" aria-hidden="true"><path d={ICON} /></svg>
         {busy ? "Making PDF…" : label}
       </button>
+      {direct && (
+        <button type="button" onClick={send} disabled={busy} className="self-start text-[11px] font-medium text-ink-soft underline underline-offset-2 hover:text-ink">
+          Send the file itself
+        </button>
+      )}
+      {chatLink && <a href={chatLink} className="max-w-xs text-xs font-semibold text-[#128c4a] underline underline-offset-2">WhatsApp did not open? Tap here</a>}
       {err && <span role="alert" className="max-w-xs text-xs font-medium text-[#c23a3a]">{err}</span>}
 
       {saved && (
