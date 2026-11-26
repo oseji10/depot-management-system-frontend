@@ -59,9 +59,11 @@ export default function PayrollPage() {
 function NewRun({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const qc = useQueryClient();
+  const s = useSession();
+  const branchUser = s.level === "branch"; // tied to a branch: pays that branch only, never the whole business
   const branches = useOptions("/branches");
   const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7));
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useState(branchUser && s.branch ? String(s.branch.id) : "");
 
   const create = useMutation({
     mutationFn: () => api<PayrollRun>("/payroll-runs", { method: "POST", body: { period, branch_id: branch ? Number(branch) : null } }),
@@ -72,7 +74,8 @@ function NewRun({ onClose }: { onClose: () => void }) {
     <Modal title="New payroll run" onClose={onClose}>
       <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="space-y-4">
         <Field label="Month" type="month" value={period} onChange={(e) => setPeriod(e.target.value)} required />
-        <SelectField label="Who to pay" value={branch} onChange={setBranch} options={[{ value: "", label: "All branches" }, ...branches]} />
+        <SelectField label="Who to pay" value={branch} onChange={setBranch} options={branchUser ? branches : [{ value: "", label: "All branches" }, ...branches]}
+          hint={branchUser ? "You run payroll for your own branch. Head office runs it for the whole business." : "Pick a branch to pay only its staff, or All branches."} />
         <p className="text-sm text-ink-soft">The run is a draft first. You can check each payslip and add one-off bonuses or deductions before approving it.</p>
         {create.error && <ErrorNote>{(create.error as Error).message}</ErrorNote>}
         <div className="flex justify-end gap-2">
